@@ -1,0 +1,6 @@
+@QLKho.Api_HostAddress = http://localhost:5052
+
+GET {{QLKho.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
