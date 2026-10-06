@@ -219,6 +219,21 @@ public class AssetsController : ControllerBase
         }
     }
 
+    // POST: api/assets/import-handover
+    [HttpPost("import-handover")]
+    public async Task<ActionResult<ImportHandoverResultDto>> ImportHandover([FromBody] List<ImportHandoverItemDto> items)
+    {
+        try
+        {
+            var result = await _importService.ImportHandoverBulkAsync(items);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     // GET: api/assets/handover-history
     [HttpGet("handover-history")]
     public async Task<ActionResult<IEnumerable<HandoverHistoryItemDto>>> GetHandoverHistories([FromQuery] HandoverHistoryFilterDto filter)

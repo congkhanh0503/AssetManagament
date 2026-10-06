@@ -1,30 +1,30 @@
 services:
   # ========================================================
-  # 1. Database Service: PostgreSQL 16 Alpine
+  # 0. Database Service: PostgreSQL 16
   # ========================================================
-  postgres:
+  db:
     image: postgres:16-alpine
-    container_name: qlkho_postgres
+    container_name: qlkho_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: "${POSTGRES_DB:-QLKhoAssetDB}"
-      POSTGRES_USER: "${POSTGRES_USER:-postgres}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-QLKho@Asset2026Secure!}"
+      POSTGRES_DB: ${POSTGRES_DB:-qlkho_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres@2026}
     ports:
+      # Map ra cổng 5433 để tránh trùng với PostgreSQL Service local trên máy nếu có
       - "${DB_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - qlkho-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-QLKhoAssetDB}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB:-qlkho_db}"]
       interval: 5s
       timeout: 5s
-      retries: 10
-      start_period: 10s
+      retries: 5
+    networks:
+      - qlkho-network
 
   # ========================================================
-  # 2. Backend Service: .NET 10 Web API
+  # 1. Backend Service: .NET 10 Web API
   # ========================================================
   backend:
     build:
@@ -35,20 +35,20 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Production}"
       ASPNETCORE_URLS: "http://+:5000"
-      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-QLKhoAssetDB};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-QLKho@Asset2026Secure!};"
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB:-qlkho_db};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres@2026};Include Error Detail=true;"
     ports:
       - "${API_PORT:-5000}:5000"
     volumes:
       # Mount volume để lưu trữ file PDF scan bàn giao lâu dài không bị mất
       - uploads_data:/app/wwwroot/uploads
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
     networks:
       - qlkho-network
 
   # ========================================================
-  # 3. Frontend Service: Vue 3 + Vite + Nginx Reverse Proxy
+  # 2. Frontend Service: Vue 3 + Vite + Nginx Reverse Proxy
   # ========================================================
   frontend:
     build:
@@ -59,7 +59,7 @@ services:
     container_name: qlkho_frontend
     restart: unless-stopped
     ports:
-      - "${WEB_PORT:-8080}:80"
+      - "${WEB_PORT:-6767}:67"
     depends_on:
       - backend
     networks:
@@ -77,3 +77,4 @@ volumes:
 networks:
   qlkho-network:
     driver: bridge
+

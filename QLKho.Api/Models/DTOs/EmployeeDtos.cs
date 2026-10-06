@@ -92,6 +92,7 @@ public class EmployeeItemDto
     public string? EnglishName { get; set; }
     public int DepartmentID { get; set; }
     public string DepartmentName { get; set; } = string.Empty;
+    public string? DepartmentCode { get; set; }
     public string? Title { get; set; }
     public string? Email { get; set; }
     public string? Phone { get; set; }

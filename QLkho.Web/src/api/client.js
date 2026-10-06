@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // Cấu hình URL API Backend
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://10.0.160.67:5000/api'
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -122,6 +122,7 @@ export const assetsApi = {
 
   // Import / Export
   importBulk: (items) => apiClient.post('/assets/import-bulk', items),
+  importHandover: (items) => apiClient.post('/assets/import-handover', items),
   exportCsvUrl: (params = {}) => {
     const query = new URLSearchParams(params).toString()
     return `/api/assets/export-csv${query ? '?' + query : ''}`
@@ -199,6 +200,7 @@ export const employeesApi = {
 
   // Import / Export
   importBulk: (rows, updateExisting = false) => apiClient.post(`/employees/import-bulk?updateExisting=${updateExisting}`, rows),
+  importAccounts: (data) => apiClient.post('/employees/import-accounts', data),
   exportCsvUrl: (params = {}) => {
     const query = new URLSearchParams(params).toString()
     return `/api/employees/export-csv${query ? '?' + query : ''}`

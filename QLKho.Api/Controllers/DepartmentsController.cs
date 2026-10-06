@@ -18,15 +18,32 @@ public class DepartmentsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<DepartmentDto>>> GetDepartments()
     {
-        return Ok(await _departmentService.GetAllAsync());
+        try
+        {
+            var depts = await _departmentService.GetAllAsync();
+            return Ok(depts);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GetDepartments Error]: {ex.Message} -> {ex.InnerException?.Message}");
+            return StatusCode(500, new { message = ex.InnerException != null ? $"{ex.Message} -> {ex.InnerException.Message}" : ex.Message });
+        }
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<DepartmentDto>> GetDepartment(int id)
     {
-        var dept = await _departmentService.GetByIdAsync(id);
-        if (dept == null) return NotFound(new { message = "Không tìm thấy phòng ban" });
-        return Ok(dept);
+        try
+        {
+            var dept = await _departmentService.GetByIdAsync(id);
+            if (dept == null) return NotFound(new { message = "Không tìm thấy phòng ban" });
+            return Ok(dept);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GetDepartment Error]: {ex.Message} -> {ex.InnerException?.Message}");
+            return StatusCode(500, new { message = ex.InnerException != null ? $"{ex.Message} -> {ex.InnerException.Message}" : ex.Message });
+        }
     }
 
     [HttpPost]
@@ -40,7 +57,8 @@ public class DepartmentsController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(new { message = ex.Message });
+            Console.WriteLine($"[CreateDepartment Error]: {ex.Message} -> {ex.InnerException?.Message}");
+            return BadRequest(new { message = ex.InnerException != null ? $"{ex.Message} -> {ex.InnerException.Message}" : ex.Message });
         }
     }
 
@@ -59,7 +77,8 @@ public class DepartmentsController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(new { message = ex.Message });
+            Console.WriteLine($"[UpdateDepartment Error]: {ex.Message} -> {ex.InnerException?.Message}");
+            return BadRequest(new { message = ex.InnerException != null ? $"{ex.Message} -> {ex.InnerException.Message}" : ex.Message });
         }
     }
 

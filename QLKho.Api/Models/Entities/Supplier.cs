@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QLKho.Api.Models.Entities;
 
-[Table("Suppliers")]
 public class Supplier
 {
     [Key]

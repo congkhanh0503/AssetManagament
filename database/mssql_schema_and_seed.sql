@@ -395,11 +395,29 @@ GO
 
 -- 6.1 Thêm Bộ phận
 INSERT INTO dbo.Departments (DepartmentCode, DepartmentName, Description) VALUES
-(N'IT', N'Phòng Công Nghệ Thông Tin', N'Quản trị hệ thống và hạ tầng IT'),
-(N'HR', N'Phòng Hành Chính Nhân Sự', N'Quản lý tuyển dụng, nhân sự và văn phòng phẩm'),
-(N'ACC', N'Phòng Kế Toán Tài Chính', N'Quản lý thu chi và tài sản cố định'),
-(N'SALES', N'Phòng Kinh Doanh & Marketing', N'Đội ngũ phát triển thị trường'),
-(N'RND', N'Phòng Nghiên Cứu & Phát Triển', N'R&D Team');
+(N'AE', N'AE', N'AE'),
+(N'EHS', N'EHS', N'EHS'),
+(N'FACILITY', N'Facility', N'Facility'),
+(N'FACILITY_EHS', N'Facility & EHS', N'Facility & EHS'),
+(N'FINANCE', N'Finance', N'Finance'),
+(N'HR_ADMIN', N'HR&Admin', N'HR&Admin'),
+(N'IE', N'IE', N'IE'),
+(N'IT', N'IT', N'Bộ phận IT'),
+(N'MAINTENANCE', N'Maintenance', N'Maintenance'),
+(N'MANAGEMENT', N'Management', N'Management'),
+(N'ME', N'ME', N'ME'),
+(N'NPI', N'NPI', N'NPI'),
+(N'PE', N'PE', N'PE'),
+(N'PRODUCTION', N'Production', N'Production'),
+(N'PROJECT_MANAGEMENT', N'Project Management', N'Project Management'),
+(N'PURCHASE', N'Purchase', N'Purchase'),
+(N'PURCHASING', N'Purchasing', N'Purchasing'),
+(N'QA', N'QA', N'QA'),
+(N'QUALITY', N'Quality', N'Quality'),
+(N'SCM', N'SCM', N'SCM'),
+(N'SCM_PURCHASE', N'SCM & Purchase', N'SCM & Purchase'),
+(N'SCM_PURCHASING', N'SCM & Purchasing', N'SCM & Purchasing'),
+(N'TE', N'TE', N'TE');
 
 -- 6.2 Thêm Nhà cung cấp
 INSERT INTO dbo.Suppliers (SupplierCode, SupplierName, ContactPerson, Phone, Email, Address) VALUES

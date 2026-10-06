@@ -80,7 +80,6 @@ export default {
     db_connected: 'MS SQL Server Connected'
   },
   header: {
-    search_placeholder: 'Tìm nhanh tài sản, nhân viên, số serial...',
     api_active: 'Hoạt động',
     user_menu: 'Tài khoản người dùng',
     notifications: 'Thông báo',
@@ -118,7 +117,7 @@ export default {
     broken_assets_sub: 'Chờ sửa chữa / thanh lý',
     resigned_employees: 'Cảnh Báo Nghỉ Việc',
     resigned_employees_sub: 'Chưa thu máy / Chưa khóa TK',
-    
+
     // Highlight Widget
     highlight_title: 'Highlight Cấp phát & Thu hồi',
     highlight_subtitle: 'Thống kê lưu lượng bàn giao và phòng ban nhận máy nhiều nhất',

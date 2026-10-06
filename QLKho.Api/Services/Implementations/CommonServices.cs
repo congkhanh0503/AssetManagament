@@ -18,9 +18,20 @@ public class DepartmentService : IDepartmentService
     public async Task<List<DepartmentDto>> GetAllAsync()
     {
         var list = await _context.Departments
-            .Include(d => d.Employees)
+            .AsNoTracking()
             .OrderBy(d => d.DepartmentName)
             .ToListAsync();
+
+        var empCounts = new Dictionary<int, int>();
+        try
+        {
+            empCounts = await _context.Employees
+                .AsNoTracking()
+                .GroupBy(e => e.DepartmentID)
+                .Select(g => new { DeptID = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.DeptID, x => x.Count);
+        }
+        catch (Exception) {}
 
         return list.Select(d => new DepartmentDto
         {
@@ -29,17 +40,24 @@ public class DepartmentService : IDepartmentService
             DepartmentCode = d.DepartmentCode,
             ManagerName = d.ManagerName,
             Description = d.Description,
-            EmployeeCount = d.Employees.Count
+            EmployeeCount = empCounts.TryGetValue(d.DepartmentID, out var count) ? count : 0
         }).ToList();
     }
 
     public async Task<DepartmentDto?> GetByIdAsync(int id)
     {
         var d = await _context.Departments
-            .Include(d => d.Employees)
+            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.DepartmentID == id);
 
         if (d == null) return null;
+
+        int empCount = 0;
+        try
+        {
+            empCount = await _context.Employees.AsNoTracking().CountAsync(e => e.DepartmentID == id);
+        }
+        catch (Exception) {}
 
         return new DepartmentDto
         {
@@ -48,19 +66,45 @@ public class DepartmentService : IDepartmentService
             DepartmentCode = d.DepartmentCode,
             ManagerName = d.ManagerName,
             Description = d.Description,
-            EmployeeCount = d.Employees.Count
+            EmployeeCount = empCount
         };
     }
 
     public async Task<DepartmentDto> CreateAsync(CreateDepartmentDto dto)
     {
+        string rawCode = dto.DepartmentCode?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(rawCode))
+        {
+            // Tự động sinh mã không dấu từ tên phòng ban
+            string normalized = dto.DepartmentName.Normalize(System.Text.NormalizationForm.FormD);
+            var sb = new System.Text.StringBuilder();
+            foreach (var c in normalized)
+            {
+                if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
+                    sb.Append(c);
+            }
+            rawCode = System.Text.RegularExpressions.Regex.Replace(sb.ToString().ToUpper(), @"[^A-Z0-9]+", "_").Trim('_');
+            if (string.IsNullOrWhiteSpace(rawCode)) rawCode = "PB";
+            if (rawCode.Length > 15) rawCode = rawCode[..15];
+        }
+
+        // Tự động kiểm tra và giải quyết trùng mã phòng ban (chống lỗi Unique departments_department_code_key)
+        string finalCode = rawCode;
+        int counter = 1;
+        while (await _context.Departments.AnyAsync(d => d.DepartmentCode.ToLower() == finalCode.ToLower()))
+        {
+            finalCode = $"{rawCode}_{counter++}";
+        }
+
         var dept = new Department
         {
             DepartmentName = dto.DepartmentName.Trim(),
-            DepartmentCode = dto.DepartmentCode?.Trim(),
+            DepartmentCode = finalCode,
             ManagerName = dto.ManagerName?.Trim(),
             Description = dto.Description?.Trim(),
-            CreatedAt = DateTime.UtcNow
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         _context.Departments.Add(dept);

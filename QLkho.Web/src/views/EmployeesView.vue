@@ -7,9 +7,14 @@
         <p class="page-subtitle">{{ $t('employees.subtitle') }}</p>
       </div>
       <div class="header-actions">
-        <!-- Nút Import Excel -->
+        <!-- Nút Import Excel Nhân Sự -->
         <button type="button" class="btn btn-secondary" @click="isImportOpen = true">
           📥 {{ $t('employees.btn_import') }}
+        </button>
+
+        <!-- Nút Import Tài Khoản AD/QAD -->
+        <button type="button" class="btn btn-secondary btn-account-import" @click="isAccountImportOpen = true">
+          ⚡ Import Tài Khoản
         </button>
 
         <!-- Nút Xuất CSV Dropdown -->
@@ -249,6 +254,7 @@
       :printing-equipment-list="printingEquipmentList"
       :is-bulk-equipment-print="isBulkEquipmentPrint"
       :categories="categories"
+      :departments="departments"
       @close="isPrintHandoverOpen = false"
     />
 
@@ -268,6 +274,13 @@
       :is-open="isPdfViewerOpen"
       :document="viewingPdfDoc"
       @close="isPdfViewerOpen = false"
+    />
+
+    <!-- MODAL 8: IMPORT TÀI KHOẢN (AD, QAD, TRẠNG THÁI) -->
+    <EmployeeAccountImportModal 
+      :is-open="isAccountImportOpen"
+      @close="isAccountImportOpen = false"
+      @refresh="onAccountImportRefreshed"
     />
 
     <!-- TOAST NOTIFICATION COMPONENT -->
@@ -295,6 +308,7 @@ import EmployeeHistoryModal from './EmployeesView/EmployeeHistoryModal.vue'
 import EmployeePrintHandoverModal from './EmployeesView/EmployeePrintHandoverModal.vue'
 import EmployeeImportModal from './EmployeesView/EmployeeImportModal.vue'
 import EmployeePdfViewerModal from './EmployeesView/EmployeePdfViewerModal.vue'
+import EmployeeAccountImportModal from './EmployeesView/EmployeeAccountImportModal.vue'
 
 // Quản lý người dùng & vai trò
 const currentUser = computed(() => getCurrentUser())
@@ -490,6 +504,7 @@ const printingEquipmentList = ref([])
 const isBulkEquipmentPrint = ref(false)
 
 const isImportOpen = ref(false)
+const isAccountImportOpen = ref(false)
 const isPdfViewerOpen = ref(false)
 const viewingPdfDoc = ref(null)
 
@@ -615,6 +630,12 @@ const submitUpdateAccounts = async (formData) => {
   } finally {
     submitting.value = false
   }
+}
+
+const onAccountImportRefreshed = () => {
+  fetchEmployees()
+  fetchLeaveAlerts()
+  toastRef.value?.addToast('Thành công', 'Đã cập nhật trạng thái tài khoản nhân sự từ file Excel!', 'success')
 }
 
 const openCreateEmpModal = () => {
@@ -857,11 +878,18 @@ const submitImportEmployees = async (rows) => {
 
   for (const row of rows) {
     const code = getRowValue(row, ['mã nhân viên', 'ma nhan vien', 'manhanvien', 'mã nv', 'ma nv', 'code', 'employeecode']).trim()
-    const name = getRowValue(row, ['họ và tên', 'ho va ten', 'họ tên', 'ho ten', 'hoten', 'tên', 'ten', 'fullname', 'name']).trim()
+    let name = getRowValue(row, ['họ và tên', 'ho va ten', 'họ tên', 'ho ten', 'hoten', 'tên', 'ten', 'fullname', 'name']).trim()
+    
+    const englishName = (row.englishName !== undefined && row.englishName !== null) 
+      ? String(row.englishName).trim() 
+      : getRowValue(row, ['tên tiếng anh (english name)', 'tên tiếng anh', 'ten tieng anh', 'englishname', 'english name', 'tentienganh', 'en name', 'enname', 'họ và tên_2']).trim()
+    
+    if (!name && englishName) {
+      name = englishName
+    }
     if (!name) continue
     
-    const englishName = getRowValue(row, ['tên tiếng anh', 'ten tieng anh', 'englishname', 'english name', 'tentienganh', 'en name', 'enname']).trim()
-    const deptName = getRowValue(row, ['phòng ban', 'phong ban', 'phongban', 'department', 'bộ phận', 'bo phan']).trim()
+    const deptName = getRowValue(row, ['bộ phận', 'bo phan', 'phòng ban', 'phong ban', 'phongban', 'department', 'dept']).replace(/\s+/g, ' ').trim()
     let deptId = null
     if (deptName) {
       let matchDept = departments.value.find(d => 
@@ -898,8 +926,19 @@ const submitImportEmployees = async (rows) => {
       deptId = departments.value[0]?.departmentID || 1
     }
 
-    const title = getRowValue(row, ['chức danh', 'chuc danh', 'chucdanh', 'chức vụ', 'chuc vu', 'title', 'position']).trim()
+    const title = getRowValue(row, ['title', 'chức danh', 'chuc danh', 'chucdanh', 'chức vụ', 'chuc vu', 'position']).trim()
     
+    // Trạng thái nhân sự: ON -> Active, OFF -> Resigned
+    let empStatus = 'Active'
+    if (row.status) {
+      empStatus = row.status
+    } else {
+      const rawStatus = getRowValue(row, ['status', 'trạng thái', 'trang thai']).trim().toUpperCase()
+      if (rawStatus === 'OFF' || rawStatus === 'RESIGNED' || rawStatus === 'ĐÃ NGHỈ' || rawStatus === 'NGHI VIEC') {
+        empStatus = 'Resigned'
+      }
+    }
+
     // Trích xuất địa chỉ email (chặn tuyệt đối từ khóa trạng thái như Available)
     const rawEmail = (row.email !== undefined && row.email !== null) ? String(row.email).trim() : getRowValue(row, [
       'email (địa chỉ email mới)*',
@@ -937,6 +976,12 @@ const submitImportEmployees = async (rows) => {
     // Nếu có địa chỉ email thì mặc định kích hoạt Available (trừ khi có cột trạng thái chỉ định khác)
     const emailStatus = rawEmailStatus ? parseAccountStatus(rawEmailStatus) : (email ? 'Available' : 'Disable')
 
+    // Nhận diện tài khoản Windows / Active Directory (Account)
+    const rawAccount = getRowValue(row, ['account', 'tài khoản', 'tai khoan', 'tài khoản ad', 'ad account']).trim()
+    const hasRealAccount = rawAccount && rawAccount !== 'AP\\' && rawAccount !== '---'
+    const rawAdStatus = getRowValue(row, ['active directory', 'ad', 'ad_status', 'tài khoản windows'])
+    const adStatus = rawAdStatus ? parseAccountStatus(rawAdStatus) : (hasRealAccount ? 'Available' : 'Disable')
+
     // Tìm xem nhân sự đã có sẵn trong danh sách chưa
     let existingEmp = null
     if (row._matchedEmpId) {
@@ -966,8 +1011,8 @@ const submitImportEmployees = async (rows) => {
           qad_Status: existingEmp.qaD_Status || 'Disable',
           oa_Status: existingEmp.oA_Status || 'Disable',
           email_Status: email ? 'Available' : (existingEmp.email_Status || 'Disable'),
-          ad_Status: existingEmp.aD_Status || 'Disable',
-          status: existingEmp.status || 'Active'
+          ad_Status: adStatus !== 'Disable' ? adStatus : (existingEmp.ad_Status || 'Disable'),
+          status: empStatus || existingEmp.status || 'Active'
         }
         await employeesApi.update(existingEmp.employeeID, updatePayload)
         updatedCount++
@@ -986,11 +1031,11 @@ const submitImportEmployees = async (rows) => {
         email: email || null,
         phone: phone || null,
         joinDate: joinDate,
-        status: 'Active',
+        status: empStatus,
         qaD_Status: parseAccountStatus(getRowValue(row, ['tài khoản qad', 'tai khoan qad', 'qad', 'qad_status'])),
         oA_Status: parseAccountStatus(getRowValue(row, ['tài khoản oa', 'tai khoan oa', 'oa', 'oa_status'])),
         email_Status: emailStatus,
-        aD_Status: parseAccountStatus(getRowValue(row, ['active directory', 'ad', 'ad_status', 'tài khoản windows']))
+        aD_Status: adStatus
       }
 
       try {

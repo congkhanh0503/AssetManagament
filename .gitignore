@@ -1,0 +1,29 @@
+# .NET Build artifacts
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio & IDEs
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Node & Frontend build
+node_modules/
+dist/
+dist-ssr/
+*.local
+.eslintcache
+
+# Docker volume data
+postgres_data/
+
+# OS files
+.DS_Store
+Thumbs.db

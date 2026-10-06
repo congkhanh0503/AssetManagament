@@ -105,10 +105,11 @@
                   <th style="width: 100px;">Mã NV</th>
                   <th style="min-width: 140px;">Họ và Tên</th>
                   <th style="min-width: 130px;">Tên Tiếng Anh</th>
+                  <th style="min-width: 110px;">Trạng Thái</th>
                   <th style="min-width: 130px;">Phòng Ban</th>
                   <th style="min-width: 110px;">Chức Danh</th>
                   <th style="min-width: 150px;">Email (Liên hệ / Cty)</th>
-                  <th style="width: 110px;">Số ĐT</th>
+                  <th style="width: 110px;">Account AD</th>
                   <th style="width: 100px;">Ngày Vào Làm</th>
                 </tr>
               </thead>
@@ -116,7 +117,7 @@
                 <tr 
                   v-for="(item, idx) in displayedList" 
                   :key="idx" 
-                  :class="{ 'row-error': !item.isValid, 'row-update': item.actionType === 'update' }"
+                  :class="{ 'row-error': !item.isValid, 'row-update': item.actionType === 'update', 'row-resigned': item.status === 'Resigned' }"
                 >
                   <td style="text-align: center; font-weight: 600; color: #64748b;">{{ item.rowIndex }}</td>
                   
@@ -129,7 +130,7 @@
                     </div>
                     <div v-else class="val-badge-wrap">
                       <span v-if="item.actionType === 'update'" class="val-badge badge-update">
-                        🔄 Bổ sung Email
+                        🔄 Cập nhật
                       </span>
                       <span v-else class="val-badge badge-ok">
                         🆕 Thêm mới
@@ -140,6 +141,10 @@
                   <td><strong class="font-mono text-primary">{{ item.code || '---' }}</strong></td>
                   <td><strong>{{ item.name || '---' }}</strong></td>
                   <td><span v-if="item.englishName" style="color: #4f46e5; font-weight: 600;">{{ item.englishName }}</span><span v-else style="color: #94a3b8;">---</span></td>
+                  <td>
+                    <span v-if="item.status === 'Resigned'" class="status-pill status-off">OFF (Đã nghỉ)</span>
+                    <span v-else class="status-pill status-on">ON (Đang làm)</span>
+                  </td>
                   <td>{{ item.deptName || '---' }}</td>
                   <td>{{ item.title || 'Nhân viên' }}</td>
                   <td>
@@ -148,7 +153,10 @@
                     </span>
                     <span v-else style="color: #94a3b8; font-style: italic;">Chưa có email</span>
                   </td>
-                  <td>{{ item.phone || '---' }}</td>
+                  <td>
+                    <span v-if="item.account && item.account !== 'AP\\'" class="font-mono" style="font-size: 12px; color: #0284c7;">{{ item.account }}</span>
+                    <span v-else style="color: #94a3b8;">---</span>
+                  </td>
                   <td>{{ item.joinDate || '---' }}</td>
                 </tr>
               </tbody>
@@ -274,10 +282,25 @@ const parsedList = computed(() => {
 
   return rawRows.value.map((row, index) => {
     const code = getRowValue(row, ['mã nhân viên', 'ma nhan vien', 'manhanvien', 'mã nv', 'ma nv', 'code', 'employeecode']).trim()
-    const name = getRowValue(row, ['họ và tên', 'ho va ten', 'họ tên', 'ho ten', 'hoten', 'tên', 'ten', 'fullname', 'name']).trim()
-    const englishName = getRowValue(row, ['tên tiếng anh', 'ten tieng anh', 'englishname', 'english name', 'tentienganh', 'en name', 'enname']).trim()
-    const deptName = getRowValue(row, ['phòng ban', 'phong ban', 'phongban', 'department', 'bộ phận', 'bo phan']).trim()
-    const title = getRowValue(row, ['chức danh', 'chuc danh', 'chucdanh', 'chức vụ', 'chuc vu', 'title', 'position']).trim()
+    let name = getRowValue(row, ['họ và tên', 'ho va ten', 'họ tên', 'ho ten', 'hoten', 'tên', 'ten', 'fullname', 'name']).trim()
+    const englishName = getRowValue(row, ['tên tiếng anh (english name)', 'tên tiếng anh', 'ten tieng anh', 'englishname', 'english name', 'tentienganh', 'en name', 'enname', 'họ và tên_2']).trim()
+    
+    // Nếu chưa có tên tiếng Việt nhưng có tên tiếng Anh (chuyên gia/nhân sự nước ngoài), fallback lấy tên tiếng Anh
+    if (!name && englishName) {
+      name = englishName
+    }
+    const deptName = getRowValue(row, ['bộ phận', 'bo phan', 'phòng ban', 'phong ban', 'phongban', 'department', 'dept']).replace(/\s+/g, ' ').trim()
+    const title = getRowValue(row, ['title', 'chức danh', 'chuc danh', 'chucdanh', 'chức vụ', 'chuc vu', 'position']).trim()
+    
+    // Trạng thái nhân sự: ON -> Active, OFF -> Resigned
+    const rawStatus = getRowValue(row, ['status', 'trạng thái', 'trang thai']).trim().toUpperCase()
+    let status = 'Active'
+    if (rawStatus === 'OFF' || rawStatus === 'RESIGNED' || rawStatus === 'ĐÃ NGHỈ' || rawStatus === 'NGHI VIEC') {
+      status = 'Resigned'
+    }
+
+    // Tài khoản Account AD
+    const account = getRowValue(row, ['account', 'tài khoản', 'tai khoan', 'tài khoản ad', 'ad account']).trim()
     
     // Trích xuất địa chỉ email (ưu tiên cột nhập email, không lấy nhầm cột trạng thái)
     const rawEmail = getRowValue(row, [
@@ -350,12 +373,14 @@ const parsedList = computed(() => {
 
     return {
       rowIndex: index + 1,
-      rawRow: { ...row, email, englishName, updateExisting: updateExisting.value },
+      rawRow: { ...row, email, englishName, status, account, updateExisting: updateExisting.value },
       code,
       name,
       englishName,
       deptName,
       title: title || 'Nhân viên',
+      status,
+      account,
       email,
       phone,
       joinDate: joinDate || new Date().toISOString().split('T')[0],
@@ -449,6 +474,31 @@ const submitValidRows = () => {
 
 .row-update {
   background-color: #faf5ff !important;
+}
+
+.row-resigned {
+  background-color: #fef2f2 !important;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.status-on {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.status-off {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 .import-modal-content {
   display: flex;

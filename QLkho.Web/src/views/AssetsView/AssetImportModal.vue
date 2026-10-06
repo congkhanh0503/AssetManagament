@@ -130,9 +130,7 @@
                 <th>Tên Model</th>
                 <th>Loại</th>
                 <th>Hãng</th>
-                <th>CPU</th>
-                <th>RAM</th>
-                <th>Disk</th>
+                <th>Thông Số / Cấu Hình</th>
                 <th>S/N</th>
                 <th>Ngày Mua</th>
                 <th>Hạn BH</th>
@@ -141,17 +139,19 @@
             </thead>
             <tbody>
               <tr v-for="(row, idx) in rows.slice(0, 5)" :key="idx">
-                <td><span class="code-badge-mini">{{ getRowValue(row, ['Host Name', 'Mã Máy', 'Mã Thiết Bị', 'Asset Code', 'Mã Tài Sản', 'Code']) }}</span></td>
+                <td><span class="code-badge-mini">{{ getRowValue(row, ['Computer Name', 'ComputerName', 'Host Name', 'Mã Máy', 'Mã Thiết Bị', 'Asset Code', 'Mã Tài Sản', 'Code']) }}</span></td>
                 <td><strong>{{ getRowValue(row, ['Model', 'Tên Thiết Bị', 'Tên Máy', 'Asset Name', 'Model Name', 'Name']) }}</strong></td>
                 <td>{{ getRowValue(row, ['Loại Thiết Bị', 'Loại', 'Category', 'Loại máy']) || 'Laptop' }}</td>
                 <td>{{ getRowValue(row, ['Hãng', 'Thương Hiệu', 'Brand']) || '---' }}</td>
-                <td>{{ getRowValue(row, ['CPU', 'Vi Xử Lý', 'Chip']) || '---' }}</td>
-                <td>{{ getRowValue(row, ['RAM', 'Bộ Nhớ']) || '---' }}</td>
-                <td>{{ getRowValue(row, ['Disk', 'Ổ Cứng', 'SSD', 'HDD']) || '---' }}</td>
-                <td>{{ getRowValue(row, ['Service Tag', 'Số Serial', 'Serial Number', 'S/N', 'Serial']) || '---' }}</td>
+                <td>
+                  <span class="text-dim" style="font-size: 0.75rem;">
+                    {{ getRowValue(row, ['Thông Số Kỹ Thuật', 'Thông số', 'Specifications', 'Cấu Hình']) || [getRowValue(row, ['CPU', 'Vi Xử Lý']), getRowValue(row, ['RAM', 'Bộ Nhớ']), getRowValue(row, ['Disk', 'Ổ Cứng', 'SSD'])].filter(Boolean).join(' | ') || '---' }}
+                  </span>
+                </td>
+                <td>{{ getRowValue(row, ['SN', 'Service Tag', 'Số Serial', 'Serial Number', 'S/N', 'Serial']) || '---' }}</td>
                 <td><span class="date-badge">{{ getRowValue(row, ['Ngày Mua', 'Purchase Date', 'Ngay Mua', 'Purchase']) || '---' }}</span></td>
                 <td><span class="date-badge">{{ getRowValue(row, ['Hạn Bảo Hành', 'Warranty Expire', 'Warranty', 'Han Bao Hanh']) || '---' }}</span></td>
-                <td>{{ getRowValue(row, ['Vị Trí Kho', 'Vị Trí', 'Kho', 'Warehouse Location']) || 'Kho IT - Kệ A1' }}</td>
+                <td>{{ getRowValue(row, ['Vị Trí Kho', 'Vị Trí', 'Kho', 'Warehouse Location']) || 'Kho IT' }}</td>
               </tr>
             </tbody>
           </table>

@@ -27,6 +27,7 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Sao chép bản build tĩnh từ stage 1 vào thư mục phục vụ web của Nginx
 COPY --from=build /app/dist /usr/share/nginx/html
 
-EXPOSE 80
+EXPOSE 67
 
+ENTRYPOINT []
 CMD ["nginx", "-g", "daemon off;"]

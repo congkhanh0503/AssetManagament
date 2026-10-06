@@ -13,6 +13,11 @@
           🕒 {{ $t('employees.tab_history') }}
         </button>
 
+        <!-- Nút Import Cấp Phát / Bàn Giao Hàng Loạt -->
+        <button type="button" class="btn btn-primary" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border: none;" @click="isHandoverImportOpen = true">
+          📋 Import Cấp Phát
+        </button>
+
         <!-- Nút Import Excel -->
         <button type="button" class="btn btn-secondary" @click="isImportOpen = true">
           📥 {{ $t('assets.btn_import') }}
@@ -145,12 +150,20 @@
       @import="submitImportAssets"
     />
 
+    <!-- 7b. MODAL IMPORT CẤP PHÁT / BÀN GIAO THIẾT BỊ -->
+    <AssetHandoverImportModal 
+      :is-open="isHandoverImportOpen"
+      @close="isHandoverImportOpen = false"
+      @success="handleHandoverImportSuccess"
+    />
+
     <!-- 8. MODAL IN BIÊN BẢN BÀN GIAO A4 -->
     <AssetPrintModal 
       :is-open="isPrintHandoverOpen"
       :asset="selectedAsset"
       :employees="activeEmployees"
       :categories="categories"
+      :departments="departments"
       @close="isPrintHandoverOpen = false"
     />
 
@@ -285,6 +298,7 @@ import AssetTransferModal from './AssetsView/AssetTransferModal.vue'
 import AssetReturnModal from './AssetsView/AssetReturnModal.vue'
 import AssetReportIssueModal from './AssetsView/AssetReportIssueModal.vue'
 import AssetImportModal from './AssetsView/AssetImportModal.vue'
+import AssetHandoverImportModal from './AssetsView/AssetHandoverImportModal.vue'
 import AssetPrintModal from './AssetsView/AssetPrintModal.vue'
 import AssetWarrantyModal from './AssetsView/AssetWarrantyModal.vue'
 import AssetBrandModal from './AssetsView/AssetBrandModal.vue'
@@ -322,6 +336,7 @@ const isTransferOpen = ref(false)
 const isReturnOpen = ref(false)
 const isReportIssueOpen = ref(false)
 const isImportOpen = ref(false)
+const isHandoverImportOpen = ref(false)
 const isPrintHandoverOpen = ref(false)
 const isWarrantyModalOpen = ref(false)
 const isBrandManagerOpen = ref(false)
@@ -926,20 +941,32 @@ const submitImportAssets = async ({ mode, rows, callback }) => {
 
     for (const row of rows) {
       if (mode === 'computer') {
-        const assetCode = getRowValue(row, ['Host Name', 'Mã Máy', 'Mã Thiết Bị', 'Asset Code', 'Mã Tài Sản', 'Code'])
+        const assetCode = getRowValue(row, ['Computer Name', 'ComputerName', 'Host Name', 'Mã Máy', 'Mã Thiết Bị', 'Asset Code', 'Mã Tài Sản', 'Code'])
         const assetName = getRowValue(row, ['Model', 'Tên Thiết Bị', 'Tên Máy', 'Asset Name', 'Model Name', 'Name'])
         if (!assetCode && !assetName) continue
 
-        const brand = getRowValue(row, ['Hãng', 'Thương Hiệu', 'Brand'])
-        const serialNumber = getRowValue(row, ['Service Tag', 'Số Serial', 'Serial Number', 'S/N', 'Serial'])
+        let brand = getRowValue(row, ['Hãng', 'Thương Hiệu', 'Brand'])
+        if (!brand && assetName) {
+          const m = assetName.toLowerCase()
+          if (m.includes('hp')) brand = 'HP'
+          else if (m.includes('dell')) brand = 'Dell'
+          else if (m.includes('lenovo')) brand = 'Lenovo'
+          else if (m.includes('asus')) brand = 'ASUS'
+          else if (m.includes('aoc')) brand = 'AOC'
+          else if (m.includes('advantech')) brand = 'Advantech'
+          else if (m.includes('ximagtek')) brand = 'Ximagtek'
+        }
+
+        const serialNumber = getRowValue(row, ['SN', 'Service Tag', 'Số Serial', 'Serial Number', 'S/N', 'Serial'])
         const materialCode = getRowValue(row, ['Asset Number', 'Mã Tài Sản', 'Mã Vật Tư'])
-        const cpu = getRowValue(row, ['CPU', 'Vi Xử Lý', 'Chip']) || 'Core Ultra 5-125U'
+        const rawSpecs = getRowValue(row, ['Thông Số Kỹ Thuật', 'Thông số', 'Specifications', 'Cấu Hình', 'Đặc Điểm'])
+        const cpu = getRowValue(row, ['CPU', 'Vi Xử Lý', 'Chip']) || 'Core Ultra'
         const ram = getRowValue(row, ['RAM', 'Bộ Nhớ']) || '16 GB'
         const disk = getRowValue(row, ['Disk', 'Ổ Cứng', 'SSD', 'HDD']) || '512 GB SSD'
         const os = getRowValue(row, ['OS', 'Hệ Điều Hành']) || 'Windows 11'
         const display = getRowValue(row, ['Display', 'Màn Hình']) || '14-inch'
-        const charger = getRowValue(row, ['Remark', 'Sạc', 'Củ Sạc']) || 'Kèm củ sạc + Dây nguồn zin'
-        const warehouseLocation = getRowValue(row, ['Vị Trí Kho', 'Vị Trí', 'Kho', 'Warehouse Location']) || 'Kho IT - Kệ A1'
+        const charger = getRowValue(row, ['Remark', 'Sạc', 'Củ Sạc']) || 'Kèm củ sạc + Dây nguồn'
+        const warehouseLocation = getRowValue(row, ['Vị Trí Kho', 'Vị Trí', 'Kho', 'Warehouse Location']) || 'Kho IT'
         const catStr = getRowValue(row, ['Loại Thiết Bị', 'Loại', 'Category', 'Loại máy'])
         const supplierName = getRowValue(row, ['Nhà Cung Cấp', 'Nhà cung cấp', 'Nha Cung Cap', 'Supplier', 'Supplier Name', 'NCC', 'Ncc'])
         const categoryID = matchCategory(catStr, assetCode, assetName)
@@ -956,7 +983,7 @@ const submitImportAssets = async ({ mode, rows, callback }) => {
           brand: brand || null,
           serialNumber: serialNumber || null,
           materialCode: materialCode || null,
-          specifications: `CPU: ${cpu} | RAM: ${ram} | Disk: ${disk} | OS: ${os} | Display: ${display}`,
+          specifications: rawSpecs || `CPU: ${cpu} | RAM: ${ram} | Disk: ${disk} | OS: ${os} | Display: ${display}`,
           note: `Charger: ${charger}`,
           warehouseLocation,
           status: 'Available',
@@ -964,7 +991,7 @@ const submitImportAssets = async ({ mode, rows, callback }) => {
           warrantyExpireDate: warrantyStr ? new Date(warrantyStr).toISOString() : null
         })
       } else {
-        const assetCode = getRowValue(row, ['Mã Thiết Bị', 'Mã Tài Sản', 'Asset Code', 'Host Name', 'Code'])
+        const assetCode = getRowValue(row, ['Computer Name', 'ComputerName', 'Mã Thiết Bị', 'Mã Tài Sản', 'Asset Code', 'Host Name', 'Code'])
         const assetName = getRowValue(row, ['Tên Thiết Bị', 'Model', 'Tên Máy', 'Asset Name', 'Name'])
         if (!assetCode && !assetName) continue
 
@@ -1029,6 +1056,12 @@ const submitImportAssets = async ({ mode, rows, callback }) => {
   } finally {
     submitting.value = false
   }
+}
+
+// Handler khi Import Cấp Phát thành công
+const handleHandoverImportSuccess = async (result) => {
+  toastRef.value?.show(`Đã cấp phát thành công ${result.assignedCount} thiết bị, cập nhật ${result.spareCount} máy dự phòng!`, 'success')
+  await fetchAssets()
 }
 
 // Brand CRUD Handlers

@@ -39,11 +39,19 @@
           <div class="h-doc-section">
             <div class="h-section-header">COMPUTER SPECS</div>
             <table class="h-table-grid">
+              <colgroup>
+                <col style="width: 14%;" />
+                <col style="width: 20%;" />
+                <col style="width: 14%;" />
+                <col style="width: 20%;" />
+                <col style="width: 13%;" />
+                <col style="width: 19%;" />
+              </colgroup>
               <tbody>
                 <tr>
                   <td class="h-lbl">Host Name</td>
                   <td class="h-val font-bold text-primary">{{ asset?.assetCode || '---' }}</td>
-                  <td class="h-lbl">Service Tag</td>
+                  <td class="h-lbl">Serial No.</td>
                   <td class="h-val font-mono">{{ asset?.serialNumber || 'N/A' }}</td>
                   <td class="h-lbl">Asset Number</td>
                   <td class="h-val font-mono">{{ asset?.materialCode || asset?.assetCode || '---' }}</td>
@@ -69,8 +77,8 @@
                   <td class="h-val">{{ specs.keyboard || 'Theo máy (Built-in)' }}</td>
                   <td class="h-lbl">Mouse</td>
                   <td class="h-val font-bold">{{ isWithMouse ? '1' : 'N/A' }}</td>
-                  <td class="h-lbl">Remark</td>
-                  <td class="h-val">{{ specs.charger || 'N/A' }}</td>
+                  <td class="h-lbl">Bag</td>
+                  <td class="h-val font-bold">1</td>
                 </tr>
               </tbody>
             </table>
@@ -80,22 +88,34 @@
           <div class="h-doc-section">
             <div class="h-section-header">USER INFORMATION</div>
             <table class="h-table-grid">
+              <colgroup>
+                <col style="width: 13%;" />
+                <col style="width: 20%;" />
+                <col style="width: 17%;" />
+                <col style="width: 18%;" />
+                <col style="width: 13%;" />
+                <col style="width: 19%;" />
+              </colgroup>
               <tbody>
                 <tr>
                   <td class="h-lbl">Employee ID</td>
                   <td class="h-val font-bold font-mono">{{ holder?.employeeCode || '---' }}</td>
                   <td class="h-lbl">Full Name</td>
-                  <td class="h-val font-bold text-uppercase">{{ holder?.fullName || '---' }}</td>
+                  <td class="h-val font-bold text-uppercase" :title="holder?.fullName">{{ holder?.fullName || '---' }}</td>
                   <td class="h-lbl">Department</td>
-                  <td class="h-val font-bold">{{ holder?.departmentName || '---' }}</td>
+                  <td class="h-val font-bold font-mono" :title="holderDepartmentDisplay">{{ holderDepartmentDisplay }}</td>
                 </tr>
                 <tr>
                   <td class="h-lbl">Account/Email</td>
-                  <td class="h-val font-bold text-primary">{{ holder?.email || '---' }}</td>
-                  <td class="h-lbl">Owner type</td>
-                  <td class="h-val">Single</td>
-                  <td class="h-lbl">Remark</td>
-                  <td class="h-val">N/A</td>
+                  <td class="h-val font-bold text-primary" :title="holder?.email">{{ holder?.email || '---' }}</td>
+                  <td class="h-lbl h-lbl-compact">Account/OA/VPN/<br />PC Login</td>
+                  <td class="h-val">
+                    <input type="text" class="h-inline-input" v-model="accountInfo" placeholder="Nhập tài khoản..." />
+                  </td>
+                  <td class="h-lbl">Password</td>
+                  <td class="h-val font-mono">
+                    <input type="text" class="h-inline-input font-mono font-bold" v-model="passwordInfo" />
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -164,22 +184,34 @@
           <div class="h-doc-section">
             <div class="h-section-header">USER INFORMATION</div>
             <table class="h-table-grid">
+              <colgroup>
+                <col style="width: 13%;" />
+                <col style="width: 20%;" />
+                <col style="width: 17%;" />
+                <col style="width: 18%;" />
+                <col style="width: 13%;" />
+                <col style="width: 19%;" />
+              </colgroup>
               <tbody>
                 <tr>
                   <td class="h-lbl">Employee ID</td>
                   <td class="h-val font-bold font-mono">{{ holder?.employeeCode || '---' }}</td>
                   <td class="h-lbl">Full Name</td>
-                  <td class="h-val font-bold text-uppercase">{{ holder?.fullName || '---' }}</td>
+                  <td class="h-val font-bold text-uppercase" :title="holder?.fullName">{{ holder?.fullName || '---' }}</td>
                   <td class="h-lbl">Department</td>
-                  <td class="h-val font-bold">{{ holder?.departmentName || '---' }}</td>
+                  <td class="h-val font-bold font-mono" :title="holderDepartmentDisplay">{{ holderDepartmentDisplay }}</td>
                 </tr>
                 <tr>
                   <td class="h-lbl">Account/Email</td>
-                  <td class="h-val font-bold text-primary">{{ holder?.email || '---' }}</td>
-                  <td class="h-lbl">Owner type</td>
-                  <td class="h-val">Single</td>
-                  <td class="h-lbl">Remark</td>
-                  <td class="h-val">N/A</td>
+                  <td class="h-val font-bold text-primary" :title="holder?.email">{{ holder?.email || '---' }}</td>
+                  <td class="h-lbl h-lbl-compact">Account/OA/VPN/<br />PC Login</td>
+                  <td class="h-val">
+                    <input type="text" class="h-inline-input" v-model="accountInfo" placeholder="Nhập tài khoản..." />
+                  </td>
+                  <td class="h-lbl">Password</td>
+                  <td class="h-val font-mono">
+                    <input type="text" class="h-inline-input font-mono font-bold" v-model="passwordInfo" />
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -252,7 +284,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import Modal from '@/components/common/Modal.vue'
 import companyLogo from '@/components/assets/img/logo.png'
 
@@ -272,17 +304,41 @@ const props = defineProps({
   categories: {
     type: Array,
     default: () => []
+  },
+  departments: {
+    type: Array,
+    default: () => []
   }
 })
 
 defineEmits(['close'])
 
 const isWithMouse = ref(false)
+const accountInfo = ref('')
+const passwordInfo = ref('@9e7w9qS@KTF')
+
+watch(() => props.isOpen, (newVal) => {
+  if (newVal) {
+    nextTick(() => {
+      const modalBodies = document.querySelectorAll('.modal-body')
+      modalBodies.forEach(b => { b.scrollTop = 0 })
+      const previewWrappers = document.querySelectorAll('.handover-preview-wrapper')
+      previewWrappers.forEach(p => { p.scrollTop = 0 })
+    })
+  }
+})
 
 watch(() => props.asset, (newAsset) => {
   if (newAsset) {
     const noteStr = (newAsset.note || '').toLowerCase()
     isWithMouse.value = Boolean(noteStr.includes('chuột') || noteStr.includes('mouse'))
+
+    if (newAsset.holderEmail && !accountInfo.value) {
+      accountInfo.value = newAsset.holderEmail.split('@')[0]
+    }
+    if (!passwordInfo.value) {
+      passwordInfo.value = '@9e7w9qS@KTF'
+    }
   }
 }, { immediate: true })
 
@@ -301,8 +357,25 @@ const holder = computed(() => {
     employeeCode: props.asset.holderCode || emp?.employeeCode || '',
     fullName: props.asset.holderName || emp?.fullName || '',
     departmentName: props.asset.holderDepartment || emp?.departmentName || '',
+    departmentCode: props.asset.holderDepartmentCode || emp?.departmentCode || '',
+    departmentID: emp?.departmentID || null,
     email: props.asset.holderEmail || emp?.email || ''
   }
+})
+
+const holderDepartmentDisplay = computed(() => {
+  if (!holder.value) return '---'
+  if (holder.value.departmentCode) return holder.value.departmentCode
+  if (props.asset?.holderDepartmentCode) return props.asset.holderDepartmentCode
+  
+  const dept = props.departments.find(d => 
+    (holder.value.departmentID && d.departmentID === holder.value.departmentID) ||
+    (holder.value.departmentName && (
+      d.departmentName?.toLowerCase() === holder.value.departmentName?.toLowerCase() ||
+      d.departmentCode?.toLowerCase() === holder.value.departmentName?.toLowerCase()
+    ))
+  )
+  return dept?.departmentCode || holder.value.departmentCode || holder.value.departmentName || '---'
 })
 
 const specs = computed(() => {
@@ -369,18 +442,23 @@ const handlePrint = () => {
 <style scoped>
 .handover-preview-wrapper {
   background: #cbd5e1;
-  padding: 16px;
+  padding: 12px;
   border-radius: 8px;
   overflow-x: auto;
+  overflow-y: auto;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .handover-document-form {
   background: #ffffff;
-  width: 210mm;
-  min-height: 297mm;
-  padding: 15mm 20mm;
+  width: 100%;
+  max-width: 210mm;
+  min-height: auto;
+  padding: 10mm 14mm;
   color: #000000;
   font-family: 'Times New Roman', Times, serif;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
@@ -391,11 +469,11 @@ const handlePrint = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 
 .h-company-logo {
-  height: 48px;
+  height: 44px;
   object-fit: contain;
 }
 
@@ -405,17 +483,18 @@ const handlePrint = () => {
 }
 
 .h-doc-title-en {
-  font-size: 14pt;
+  font-size: 13.5pt;
   font-weight: bold;
   text-transform: uppercase;
   margin: 0;
+  letter-spacing: 0.02em;
 }
 
 .h-doc-title-vn {
-  font-size: 11pt;
+  font-size: 10.5pt;
   font-weight: normal;
   font-style: italic;
-  margin: 2px 0 0 0;
+  margin: 1px 0 0 0;
 }
 
 .h-header-spacer {
@@ -425,21 +504,21 @@ const handlePrint = () => {
 .h-doc-date-bar {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 10px;
-  font-size: 9.5pt;
-  border-bottom: 1px solid #000;
-  padding-bottom: 4px;
+  margin-bottom: 6px;
+  font-size: 9pt;
+  border-bottom: 1.5px solid #000;
+  padding-bottom: 3px;
 }
 
 .h-doc-section {
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 
 .h-section-header {
   font-weight: bold;
-  font-size: 10pt;
+  font-size: 9.5pt;
   background: #e2e8f0;
-  padding: 3px 6px;
+  padding: 2.5px 6px;
   border: 1px solid #000;
   border-bottom: none;
 }
@@ -447,62 +526,108 @@ const handlePrint = () => {
 .h-table-grid {
   width: 100%;
   border-collapse: collapse;
-  font-size: 9pt;
+  table-layout: fixed;
+  font-size: 8.5pt;
+  margin-bottom: 0;
 }
 
 .h-table-grid td, .h-table-grid th {
-  border: 1px solid #000;
-  padding: 4px 6px;
+  border: 1px solid #000000;
+  padding: 2.5px 5px;
+  vertical-align: middle;
+  height: 23px;
+  box-sizing: border-box;
 }
 
 .h-lbl {
   background: #f8fafc;
-  font-weight: 600;
-  width: 15%;
+  font-weight: 700;
+  color: #000000;
+  font-size: 8pt;
+  white-space: normal;
+  text-align: left;
+}
+
+.h-lbl-compact {
+  font-size: 7.25pt !important;
+  line-height: 1.15 !important;
+  padding: 1.5px 3px !important;
+  letter-spacing: -0.02em;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
 }
 
 .h-val {
-  width: 18%;
+  background: #ffffff;
+  color: #000000;
+  font-size: 8.5pt;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+.h-inline-input {
+  width: 100%;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  padding: 1px 4px;
+  font-size: 8.5pt;
+  font-family: inherit;
+  color: #0f172a;
+  border-radius: 2px;
+  outline: none;
+  box-sizing: border-box;
+  height: 20px;
+}
+
+.h-inline-input:focus {
+  border-color: #2563eb;
+  background: #ffffff;
 }
 
 .h-agreement-box {
   border: 1px solid #000;
-  padding: 8px 10px;
-  font-size: 8.5pt;
-  line-height: 1.4;
+  padding: 5px 8px;
+  font-size: 8pt;
+  line-height: 1.35;
 }
 
 .h-agree-p {
-  margin: 4px 0;
+  margin: 2px 0;
 }
 
 .h-sub-rules {
-  margin-left: 12px;
+  margin-left: 10px;
+  margin-top: 2px;
+  margin-bottom: 2px;
 }
 
 .h-rule-row {
   display: flex;
-  gap: 6px;
-  margin: 2px 0;
+  gap: 4px;
+  margin: 1px 0;
 }
 
 .h-rule-tag {
   font-weight: bold;
-  min-width: 65px;
+  min-width: 60px;
 }
 
 .h-sign-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 15px;
+  margin-top: 6px;
   text-align: center;
-  font-size: 9.5pt;
+  font-size: 9pt;
 }
 
 .h-sign-th {
   border: 1px solid #000;
   font-weight: bold;
-  padding: 4px;
+  padding: 3px;
   width: 33.33%;
   background: #f1f5f9;
 }
@@ -512,11 +637,12 @@ const handlePrint = () => {
   font-style: italic;
   font-weight: normal;
   padding: 2px;
+  font-size: 8pt;
 }
 
 .h-sign-cell {
   border: 1px solid #000;
-  height: 80px;
+  height: 60px;
   vertical-align: bottom;
 }
 
@@ -537,5 +663,45 @@ const handlePrint = () => {
   background: #dbeafe;
   border-color: #3b82f6;
   font-weight: bold;
+}
+
+@media print {
+  .handover-preview-wrapper {
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  .handover-document-form {
+    box-shadow: none !important;
+    padding: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
+  }
+
+  .h-table-grid {
+    table-layout: fixed !important;
+    font-size: 8.5pt !important;
+  }
+  
+  .h-table-grid td, .h-table-grid th {
+    border: 1px solid #000000 !important;
+    padding: 2px 4px !important;
+  }
+
+  .h-lbl {
+    background: #f8fafc !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .h-inline-input {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    font-size: 8.5pt !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    height: auto !important;
+  }
 }
 </style>

@@ -111,11 +111,20 @@ public class EmployeeService : IEmployeeService
             .OrderBy(e => e.FullName)
             .ToListAsync();
 
-        var handoverDocs = await _context.Documents
-            .Where(d => d.DocumentType == "HandoverReceipt")
-            .Select(d => new { d.EmployeeID, d.AssetID })
-            .AsNoTracking()
-            .ToListAsync();
+        var handoverDocs = new List<dynamic>();
+        try
+        {
+            var rawDocs = await _context.Documents
+                .AsNoTracking()
+                .Where(d => d.DocumentType == "HandoverReceipt")
+                .Select(d => new { d.EmployeeID, d.AssetID })
+                .ToListAsync();
+            handoverDocs = rawDocs.Cast<dynamic>().ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EmployeeService Documents Notice]: {ex.Message}");
+        }
 
         return employees.Select(e =>
         {
@@ -145,6 +154,7 @@ public class EmployeeService : IEmployeeService
                 EnglishName = e.EnglishName,
                 DepartmentID = e.DepartmentID,
                 DepartmentName = e.Department != null ? e.Department.DepartmentName : string.Empty,
+                DepartmentCode = e.Department != null ? e.Department.DepartmentCode : string.Empty,
                 Title = e.Title,
                 Email = e.Email,
                 Phone = e.Phone,
@@ -205,6 +215,7 @@ public class EmployeeService : IEmployeeService
             EnglishName = e.EnglishName,
             DepartmentID = e.DepartmentID,
             DepartmentName = e.Department != null ? e.Department.DepartmentName : string.Empty,
+            DepartmentCode = e.Department != null ? e.Department.DepartmentCode : string.Empty,
             Title = e.Title,
             Email = e.Email,
             Phone = e.Phone,
@@ -298,8 +309,57 @@ public class EmployeeService : IEmployeeService
         };
     }
 
+    private async Task<string> GenerateNextEmployeeCodeAsync()
+    {
+        var existingCodes = await _context.Employees
+            .Where(e => !string.IsNullOrEmpty(e.EmployeeCode))
+            .Select(e => e.EmployeeCode!.Trim())
+            .ToListAsync();
+
+        var codeSet = new HashSet<string>(existingCodes, StringComparer.OrdinalIgnoreCase);
+
+        int maxEmpNum = 0;
+        foreach (var c in existingCodes)
+        {
+            if (c.StartsWith("EMP", StringComparison.OrdinalIgnoreCase) && int.TryParse(c.Substring(3), out int n))
+            {
+                if (n > maxEmpNum) maxEmpNum = n;
+            }
+            else if (c.StartsWith("NV", StringComparison.OrdinalIgnoreCase) && int.TryParse(c.Substring(2), out int n2))
+            {
+                if (n2 > maxEmpNum) maxEmpNum = n2;
+            }
+        }
+
+        int nextNum = maxEmpNum > 0 ? maxEmpNum + 1 : (existingCodes.Count + 1);
+        string candidate = $"EMP{nextNum:D4}";
+        while (codeSet.Contains(candidate))
+        {
+            nextNum++;
+            candidate = $"EMP{nextNum:D4}";
+        }
+
+        return candidate;
+    }
+
     public async Task<EmployeeItemDto> CreateEmployeeAsync(CreateEmployeeDto dto)
     {
+        // 1. Kiểm tra hoặc tự sinh mã nhân viên nếu rỗng
+        string code = dto.EmployeeCode?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            code = await GenerateNextEmployeeCodeAsync();
+        }
+        else
+        {
+            // Kiểm tra trùng mã
+            var exists = await _context.Employees.AnyAsync(e => e.EmployeeCode != null && e.EmployeeCode.ToLower() == code.ToLower());
+            if (exists)
+            {
+                throw new InvalidOperationException($"Mã nhân viên '{code}' đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
+            }
+        }
+
         int deptId = dto.DepartmentID ?? 0;
         if (deptId <= 0)
         {
@@ -315,7 +375,7 @@ public class EmployeeService : IEmployeeService
 
         var employee = new Employee
         {
-            EmployeeCode = dto.EmployeeCode?.Trim(),
+            EmployeeCode = code,
             FullName = dto.FullName.Trim(),
             EnglishName = dto.EnglishName?.Trim(),
             DepartmentID = deptId,
@@ -332,6 +392,13 @@ public class EmployeeService : IEmployeeService
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
+
+        // QUY TẮC TOÀN HỆ THỐNG: Nếu nhân viên có Email => Tự động kích hoạt Email và OA (Available)
+        if (!string.IsNullOrWhiteSpace(employee.Email))
+        {
+            employee.Email_Status = "Available";
+            employee.OA_Status = "Available";
+        }
 
         _context.Employees.Add(employee);
         await _context.SaveChangesAsync();
@@ -356,7 +423,22 @@ public class EmployeeService : IEmployeeService
         if (employee == null)
             throw new KeyNotFoundException($"Không tìm thấy nhân viên với ID {id}");
 
-        employee.EmployeeCode = dto.EmployeeCode?.Trim();
+        string code = dto.EmployeeCode?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            code = !string.IsNullOrWhiteSpace(employee.EmployeeCode) ? employee.EmployeeCode : await GenerateNextEmployeeCodeAsync();
+        }
+        else if (!string.Equals(employee.EmployeeCode, code, StringComparison.OrdinalIgnoreCase))
+        {
+            // Nếu đổi mã, kiểm tra xem có trùng với nhân viên KHÁC không
+            var exists = await _context.Employees.AnyAsync(e => e.EmployeeID != id && e.EmployeeCode != null && e.EmployeeCode.ToLower() == code.ToLower());
+            if (exists)
+            {
+                throw new InvalidOperationException($"Mã nhân viên '{code}' đã được sử dụng bởi nhân viên khác.");
+            }
+        }
+
+        employee.EmployeeCode = code;
         employee.FullName = dto.FullName.Trim();
         employee.EnglishName = dto.EnglishName?.Trim();
         if (dto.DepartmentID.HasValue && dto.DepartmentID.Value > 0)
@@ -373,6 +455,14 @@ public class EmployeeService : IEmployeeService
         if (!string.IsNullOrWhiteSpace(dto.OA_Status)) employee.OA_Status = dto.OA_Status;
         if (!string.IsNullOrWhiteSpace(dto.Email_Status)) employee.Email_Status = dto.Email_Status;
         if (!string.IsNullOrWhiteSpace(dto.AD_Status)) employee.AD_Status = dto.AD_Status;
+
+        // QUY TẮC TOÀN HỆ THỐNG: Nếu nhân viên có Email => Tự động kích hoạt Email và OA (Available)
+        if (!string.IsNullOrWhiteSpace(employee.Email))
+        {
+            employee.Email_Status = "Available";
+            employee.OA_Status = "Available";
+        }
+
         employee.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
@@ -480,11 +570,20 @@ public class EmployeeService : IEmployeeService
             .AsNoTracking()
             .ToListAsync();
 
-        var docs = await _context.Documents
-            .Where(d => d.DocumentType == "HandoverReceipt")
-            .Select(d => new { d.EmployeeID, d.AssetID })
-            .AsNoTracking()
-            .ToListAsync();
+        var docs = new List<dynamic>();
+        try
+        {
+            var rawDocs = await _context.Documents
+                .AsNoTracking()
+                .Where(d => d.DocumentType == "HandoverReceipt")
+                .Select(d => new { d.EmployeeID, d.AssetID })
+                .ToListAsync();
+            docs = rawDocs.Cast<dynamic>().ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EmployeeService MissingAlerts Documents Notice]: {ex.Message}");
+        }
 
         var result = new List<MissingHandoverAlertDto>();
 

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using QLKho.Api.Models.DTOs;
 using QLKho.Api.Services.Interfaces;
 
@@ -67,6 +68,18 @@ public class EmployeesController : ControllerBase
             var created = await _employeeService.CreateEmployeeAsync(dto);
             return CreatedAtAction(nameof(GetEmployee), new { id = created.EmployeeID }, created);
         }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (DbUpdateException ex)
+        {
+            if (ex.InnerException?.Message.Contains("employees_employee_code_key") == true)
+            {
+                return BadRequest(new { message = "Mã nhân viên này đã tồn tại trong hệ thống. Vui lòng chọn mã khác." });
+            }
+            return BadRequest(new { message = ex.InnerException != null ? $"{ex.Message} -> {ex.InnerException.Message}" : ex.Message });
+        }
         catch (Exception ex)
         {
             return BadRequest(new { message = ex.InnerException != null ? $"{ex.Message} -> {ex.InnerException.Message}" : ex.Message });
@@ -86,6 +99,18 @@ public class EmployeesController : ControllerBase
         catch (KeyNotFoundException)
         {
             return NotFound(new { message = "Không tìm thấy nhân viên" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (DbUpdateException ex)
+        {
+            if (ex.InnerException?.Message.Contains("employees_employee_code_key") == true)
+            {
+                return BadRequest(new { message = "Mã nhân viên này đã tồn tại trong hệ thống. Vui lòng chọn mã khác." });
+            }
+            return BadRequest(new { message = ex.InnerException != null ? $"{ex.Message} -> {ex.InnerException.Message}" : ex.Message });
         }
         catch (Exception ex)
         {
@@ -205,5 +230,20 @@ public class EmployeesController : ControllerBase
     {
         var history = await _employeeService.CreateHistoryAsync(dto);
         return Ok(history);
+    }
+
+    // POST: api/employees/import-accounts
+    [HttpPost("import-accounts")]
+    public async Task<ActionResult<ImportAccountResultDto>> ImportAccountsBulk([FromBody] ImportAccountRequestDto request)
+    {
+        try
+        {
+            var result = await _importService.ImportAccountsBulkAsync(request);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

@@ -174,6 +174,7 @@ public class AssetItemDto
     public string? HolderName { get; set; }
     public string? HolderCode { get; set; }
     public string? HolderDepartment { get; set; }
+    public string? HolderDepartmentCode { get; set; }
     public string? HolderEmail { get; set; }
     public string DynamicLocation { get; set; } = string.Empty;
     public string? WarehouseLocation { get; set; }

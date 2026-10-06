@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QLKho.Api.Models.Entities;
 
-[Table("Employees")]
 public class Employee
 {
     [Key]
@@ -37,18 +36,22 @@ public class Employee
     // Trạng thái các tài khoản kèm theo (Available / Disable / Deleted)
     [Required]
     [MaxLength(20)]
+    [Column("qad_status")]
     public string QAD_Status { get; set; } = "Disable";
 
     [Required]
     [MaxLength(20)]
+    [Column("oa_status")]
     public string OA_Status { get; set; } = "Disable";
 
     [Required]
     [MaxLength(20)]
+    [Column("email_status")]
     public string Email_Status { get; set; } = "Disable";
 
     [Required]
     [MaxLength(20)]
+    [Column("ad_status")]
     public string AD_Status { get; set; } = "Disable";
 
     [Required]

@@ -19,6 +19,9 @@
         <RouterView />
       </main>
     </div>
+
+    <!-- Chatbot Widget AI Tra Cứu -->
+    <ChatbotWidget />
   </div>
 </template>
 
@@ -27,6 +30,7 @@ import { computed } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import Sidebar from '@/components/layout/Sidebar.vue'
 import Header from '@/components/layout/Header.vue'
+import ChatbotWidget from '@/components/chat/ChatbotWidget.vue'
 
 const route = useRoute()
 const isLoginPage = computed(() => route.name === 'login' || route.path === '/login')

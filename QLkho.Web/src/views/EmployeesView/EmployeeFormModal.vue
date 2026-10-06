@@ -13,12 +13,12 @@
     <form @submit.prevent="$emit('submit', form)">
       <div class="modal-grid-2">
         <div class="form-group">
-          <label class="form-label">{{ $t('employees.table_code') }} <span class="label-optional">(Optional)</span></label>
+          <label class="form-label">{{ $t('employees.table_code') }} <span class="label-optional">(Để trống sẽ tự sinh mã)</span></label>
           <input 
             type="text" 
             class="form-control" 
             v-model="form.employeeCode" 
-            placeholder="EMP001" 
+            placeholder="Tự động sinh nếu để trống (Vd: EMP0277)..." 
             :disabled="isHR && isEdit && !isUpcomingJoin(form.joinDate)"
           />
         </div>
@@ -82,6 +82,9 @@
             placeholder="example@company.com" 
             :disabled="isHR && isEdit && !isUpcomingJoin(form.joinDate)"
           />
+          <small class="field-hint" style="color: #10b981; font-size: 0.75rem;">
+            ✨ Điền email sẽ tự động kích hoạt tài khoản Email & OA (Available)
+          </small>
         </div>
       </div>
 
@@ -280,6 +283,14 @@ const populateForm = () => {
 watch([() => props.isOpen, () => props.employee, () => props.isEdit], () => {
   populateForm()
 }, { immediate: true, deep: true })
+
+// QUY TẮC: Khi email được điền => Tự động kích hoạt tài khoản Email & OA (Available)
+watch(() => form.email, (newVal) => {
+  if (newVal && String(newVal).trim() !== '') {
+    form.email_Status = 'Available'
+    form.oA_Status = 'Available'
+  }
+})
 
 const getDaysUntilJoin = (joinDateStr) => {
   if (!joinDateStr) return null
