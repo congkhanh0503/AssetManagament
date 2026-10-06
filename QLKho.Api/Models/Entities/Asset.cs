@@ -47,6 +47,14 @@ public class Asset
 
     public string? Note { get; set; }
 
+    public int? OrderID { get; set; }
+
+    [MaxLength(100)]
+    public string? OrderCode { get; set; }
+
+    [MaxLength(255)]
+    public string? ProjectName { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
@@ -59,6 +67,9 @@ public class Asset
 
     [ForeignKey("CurrentHolderID")]
     public virtual Employee? CurrentHolder { get; set; }
+
+    [ForeignKey("OrderID")]
+    public virtual Order? Order { get; set; }
 
     public virtual ICollection<AssetHandoverHistory> HandoverHistories { get; set; } = new List<AssetHandoverHistory>();
     public virtual ICollection<AssetMaintenance> Maintenances { get; set; } = new List<AssetMaintenance>();

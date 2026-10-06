@@ -69,6 +69,7 @@ export default {
     section_overview: 'Tổng quan & Nghiệp vụ',
     dashboard: 'Dashboard Thống kê',
     assets: 'Quản lý Tài sản & Cấp phát',
+    orders: 'Quản lý Đơn hàng & Nhập kho',
     documents: 'Lưu Trữ Hồ Sơ / PDF',
     section_management: 'Danh mục Quản trị',
     employees: 'Nhân sự & Tài khoản',

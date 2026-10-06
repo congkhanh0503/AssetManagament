@@ -257,3 +257,19 @@ export const documentsApi = {
   getDownloadUrl: (id) => `/api/documents/${id}/download`,
   getFileUrl: (filePath) => (filePath?.startsWith('http') ? filePath : (filePath?.startsWith('/') ? filePath : `/${filePath || ''}`))
 }
+
+// ==========================================
+// 6. ORDERS APIs (Quản lý Đơn hàng)
+// ==========================================
+export const ordersApi = {
+  getAll: (params = {}) => apiClient.get('/orders', { params }),
+  getById: (id) => apiClient.get(`/orders/${id}`),
+  create: (data) => apiClient.post('/orders', data),
+  update: (id, data) => apiClient.put(`/orders/${id}`, data),
+  delete: (id) => apiClient.delete(`/orders/${id}`),
+  addDevice: (id, data) => apiClient.post(`/orders/${id}/devices`, data),
+  bulkAddDevices: (id, data) => apiClient.post(`/orders/${id}/devices/bulk`, data),
+  removeDevice: (id, deviceId) => apiClient.delete(`/orders/${id}/devices/${deviceId}`),
+  syncToAssets: (id) => apiClient.post(`/orders/${id}/sync-assets`),
+}
+

@@ -136,8 +136,10 @@
                   <span class="code-badge sub-code-badge" style="border-left: 2px solid #2563eb;">↳ {{ item.assetCode }}</span>
                 </td>
                 <td>
-                  <div style="font-size: 0.85rem; font-weight: 600; color: #1e293b;">
-                    {{ item.assetName }} <span style="color: #64748b; font-size: 0.75rem; font-weight: 400;">(#{{ item.subIndex }})</span>
+                  <div style="font-size: 0.85rem; font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <span>{{ item.assetName }}</span> <span style="color: #64748b; font-size: 0.75rem; font-weight: 400;">(#{{ item.subIndex }})</span>
+                    <span v-if="item.orderCode" class="po-tag" :title="`Đơn hàng: ${item.orderCode}`">📦 {{ item.orderCode }}</span>
+                    <span v-if="item.projectName" class="proj-tag-mini" :title="`Dự án: ${item.projectName}`">🎯 {{ item.projectName }}</span>
                   </div>
                   <!-- Chỉ hiển thị nếu thiết bị có cấu hình đặc thù khác với cấu hình chung của Model -->
                   <div v-if="hasCustomSpecs(item)" class="spec-text-inline" style="max-width: 400px; font-size: 0.725rem; color: #b45309; margin-top: 2px;">
@@ -348,6 +350,8 @@
                   <div class="asset-specs-sub">
                     <span v-if="item.brand" class="brand-tag">{{ item.brand }}</span>
                     <span v-if="item.categoryName" class="cat-tag">{{ item.categoryName }}</span>
+                    <span v-if="item.orderCode" class="po-tag" :title="`Đơn hàng: ${item.orderCode}`">📦 {{ item.orderCode }}</span>
+                    <span v-if="item.projectName" class="proj-tag-mini" :title="`Dự án: ${item.projectName}`">🎯 {{ item.projectName }}</span>
                     <span v-if="item.specifications" class="spec-text-inline" :title="`Cấu hình: ${item.specifications}`">
                       ⚙️ {{ item.specifications }}
                     </span>
@@ -851,6 +855,26 @@ const paginatedAssets = computed(() => {
   color: #2563eb;
   border: 1px solid #bfdbfe;
   font-size: 0.725rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.po-tag {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.proj-tag-mini {
+  background: #f5f3ff;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
+  font-size: 0.7rem;
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 4px;

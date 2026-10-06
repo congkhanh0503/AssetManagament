@@ -50,6 +50,7 @@ builder.Services.AddScoped<QLKho.Api.Services.Interfaces.IDepartmentService, QLK
 builder.Services.AddScoped<QLKho.Api.Services.Interfaces.ICategoryService, QLKho.Api.Services.Implementations.CategoryService>();
 builder.Services.AddScoped<QLKho.Api.Services.Interfaces.ISupplierService, QLKho.Api.Services.Implementations.SupplierService>();
 builder.Services.AddScoped<QLKho.Api.Services.Interfaces.IBrandService, QLKho.Api.Services.Implementations.BrandService>();
+builder.Services.AddScoped<QLKho.Api.Services.Interfaces.IOrderService, QLKho.Api.Services.Implementations.OrderService>();
 
 // 5. Cấu hình Swagger / OpenAPI Documentation
 builder.Services.AddEndpointsApiExplorer();
@@ -231,8 +232,60 @@ using (var scope = app.Services.CreateScope())
                 action_date TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
+            -- 12. Bảng Đơn hàng (Orders)
+            CREATE TABLE IF NOT EXISTS orders (
+                order_id SERIAL PRIMARY KEY,
+                order_code VARCHAR(50) NOT NULL UNIQUE,
+                order_name VARCHAR(255) NOT NULL,
+                is_project_based BOOLEAN NOT NULL DEFAULT FALSE,
+                project_name VARCHAR(255),
+                supplier_id INT REFERENCES suppliers(supplier_id) ON DELETE SET NULL,
+                supplier_name VARCHAR(255),
+                order_date TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                expected_delivery_date TIMESTAMPTZ,
+                actual_delivery_date TIMESTAMPTZ,
+                status VARCHAR(30) NOT NULL DEFAULT 'Pending',
+                note TEXT,
+                created_by VARCHAR(100) DEFAULT 'Admin',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- 13. Bảng Dòng loại thiết bị trong đơn (OrderItems)
+            CREATE TABLE IF NOT EXISTS order_items (
+                order_item_id SERIAL PRIMARY KEY,
+                order_id INT NOT NULL REFERENCES orders(order_id) ON DELETE CASCADE,
+                category_id INT REFERENCES asset_categories(category_id) ON DELETE SET NULL,
+                category_name VARCHAR(100),
+                model_name VARCHAR(255) NOT NULL,
+                brand VARCHAR(100),
+                specifications VARCHAR(500),
+                expected_quantity INT NOT NULL DEFAULT 1,
+                received_quantity INT NOT NULL DEFAULT 0,
+                unit_price NUMERIC(18,2),
+                note VARCHAR(500),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- 14. Bảng Thiết bị cụ thể đã nhập vào đơn (OrderDeviceItems)
+            CREATE TABLE IF NOT EXISTS order_device_items (
+                device_item_id SERIAL PRIMARY KEY,
+                order_id INT NOT NULL REFERENCES orders(order_id) ON DELETE CASCADE,
+                order_item_id INT NOT NULL REFERENCES order_items(order_item_id) ON DELETE CASCADE,
+                asset_code VARCHAR(100) NOT NULL,
+                serial_number VARCHAR(150),
+                asset_name VARCHAR(255) NOT NULL,
+                category_id INT REFERENCES asset_categories(category_id) ON DELETE SET NULL,
+                brand VARCHAR(100),
+                specifications VARCHAR(500),
+                warehouse_location VARCHAR(255) DEFAULT 'Kho IT - Kệ A1',
+                is_transferred_to_asset BOOLEAN NOT NULL DEFAULT FALSE,
+                asset_id INT REFERENCES assets(asset_id) ON DELETE SET NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
             -- =========================================================================
-            -- TỰ ĐỘNG BỔ SUNG CỘT CHO TẤT CẢ 11 BẢNG (ĐỀ PHÒNG DATABASE CŨ BỊ THIẾU CỘT)
+            -- TỰ ĐỘNG BỔ SUNG CỘT CHO TẤT CẢ CÁC BẢNG (ĐỀ PHÒNG DATABASE CŨ BỊ THIẾU CỘT)
             -- =========================================================================
             ALTER TABLE departments ADD COLUMN IF NOT EXISTS department_code VARCHAR(50) DEFAULT 'PB';
             ALTER TABLE departments ADD COLUMN IF NOT EXISTS department_name VARCHAR(255) DEFAULT '';
@@ -294,6 +347,9 @@ using (var scope = app.Services.CreateScope())
             ALTER TABLE assets ADD COLUMN IF NOT EXISTS current_holder_id INT;
             ALTER TABLE assets ADD COLUMN IF NOT EXISTS warehouse_location VARCHAR(255) DEFAULT 'Kho IT - Kệ A1';
             ALTER TABLE assets ADD COLUMN IF NOT EXISTS note TEXT;
+            ALTER TABLE assets ADD COLUMN IF NOT EXISTS order_id INT;
+            ALTER TABLE assets ADD COLUMN IF NOT EXISTS order_code VARCHAR(100);
+            ALTER TABLE assets ADD COLUMN IF NOT EXISTS project_name VARCHAR(255);
             ALTER TABLE assets ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
             ALTER TABLE assets ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
 

@@ -20,6 +20,9 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<EmployeeHistory> EmployeeHistories => Set<EmployeeHistory>();
     public DbSet<Brand> Brands => Set<Brand>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<OrderDeviceItem> OrderDeviceItems => Set<OrderDeviceItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -100,6 +103,49 @@ public class AppDbContext : DbContext
             .HasOne(m => m.Reporter)
             .WithMany()
             .HasForeignKey(m => m.ReportedBy)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // Configure Orders relationships
+        modelBuilder.Entity<Order>()
+            .HasOne(o => o.Supplier)
+            .WithMany()
+            .HasForeignKey(o => o.SupplierID)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<OrderItem>()
+            .HasOne(oi => oi.Order)
+            .WithMany(o => o.Items)
+            .HasForeignKey(oi => oi.OrderID)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<OrderItem>()
+            .HasOne(oi => oi.Category)
+            .WithMany()
+            .HasForeignKey(oi => oi.CategoryID)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<OrderDeviceItem>()
+            .HasOne(od => od.Order)
+            .WithMany(o => o.Devices)
+            .HasForeignKey(od => od.OrderID)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<OrderDeviceItem>()
+            .HasOne(od => od.OrderItem)
+            .WithMany(oi => oi.Devices)
+            .HasForeignKey(od => od.OrderItemID)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<OrderDeviceItem>()
+            .HasOne(od => od.Asset)
+            .WithMany()
+            .HasForeignKey(od => od.AssetID)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Asset>()
+            .HasOne(a => a.Order)
+            .WithMany()
+            .HasForeignKey(a => a.OrderID)
             .OnDelete(DeleteBehavior.SetNull);
     }
 }
