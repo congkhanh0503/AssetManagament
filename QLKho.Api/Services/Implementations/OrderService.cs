@@ -20,6 +20,7 @@ public class OrderService : IOrderService
         var query = _context.Orders
             .Include(o => o.Items)
             .Include(o => o.Devices)
+                .ThenInclude(d => d.Asset)
             .AsNoTracking()
             .AsQueryable();
 
@@ -53,10 +54,32 @@ public class OrderService : IOrderService
             .Include(o => o.Items)
                 .ThenInclude(i => i.Category)
             .Include(o => o.Devices)
+                .ThenInclude(d => d.Asset)
+                    .ThenInclude(a => a.CurrentHolder)
             .AsNoTracking()
             .FirstOrDefaultAsync(o => o.OrderID == orderId);
 
         if (order == null) return null;
+
+        int inWarehouse = 0;
+        int inUse = 0;
+        int broken = 0;
+        int maintenance = 0;
+
+        foreach (var d in order.Devices)
+        {
+            if (d.Asset != null)
+            {
+                if (d.Asset.Status == "In-Use") inUse++;
+                else if (d.Asset.Status == "Broken") broken++;
+                else if (d.Asset.Status == "Maintenance") maintenance++;
+                else inWarehouse++;
+            }
+            else
+            {
+                inWarehouse++;
+            }
+        }
 
         var dto = new OrderDetailDto
         {
@@ -75,23 +98,36 @@ public class OrderService : IOrderService
             CreatedBy = order.CreatedBy,
             TotalExpectedQuantity = order.Items.Sum(i => i.ExpectedQuantity),
             TotalReceivedQuantity = order.Devices.Count,
+            InWarehouseCount = inWarehouse,
+            InUseCount = inUse,
+            BrokenCount = broken,
+            MaintenanceCount = maintenance,
             ItemTypesCount = order.Items.Count,
             TransferredAssetsCount = order.Devices.Count(d => d.IsTransferredToAsset),
             CreatedAt = order.CreatedAt,
             UpdatedAt = order.UpdatedAt,
-            Items = order.Items.Select(i => new OrderItemDetailDto
+            Items = order.Items.Select(i =>
             {
-                OrderItemID = i.OrderItemID,
-                OrderID = i.OrderID,
-                CategoryID = i.CategoryID,
-                CategoryName = i.Category?.CategoryName ?? i.CategoryName,
-                ModelName = i.ModelName,
-                Brand = i.Brand,
-                Specifications = i.Specifications,
-                ExpectedQuantity = i.ExpectedQuantity,
-                ReceivedQuantity = order.Devices.Count(d => d.OrderItemID == i.OrderItemID),
-                UnitPrice = i.UnitPrice,
-                Note = i.Note
+                var itemDevices = order.Devices.Where(d => d.OrderItemID == i.OrderItemID).ToList();
+                int itemInUse = itemDevices.Count(d => d.Asset != null && d.Asset.Status == "In-Use");
+                int itemInWarehouse = itemDevices.Count - itemInUse;
+
+                return new OrderItemDetailDto
+                {
+                    OrderItemID = i.OrderItemID,
+                    OrderID = i.OrderID,
+                    CategoryID = i.CategoryID,
+                    CategoryName = i.Category?.CategoryName ?? i.CategoryName,
+                    ModelName = i.ModelName,
+                    Brand = i.Brand,
+                    Specifications = i.Specifications,
+                    ExpectedQuantity = i.ExpectedQuantity,
+                    ReceivedQuantity = itemDevices.Count,
+                    InWarehouseCount = itemInWarehouse,
+                    InUseCount = itemInUse,
+                    UnitPrice = i.UnitPrice,
+                    Note = i.Note
+                };
             }).ToList(),
             Devices = order.Devices.OrderBy(d => d.DeviceItemID).Select(d => new OrderDeviceItemDto
             {
@@ -107,6 +143,9 @@ public class OrderService : IOrderService
                 WarehouseLocation = d.WarehouseLocation,
                 IsTransferredToAsset = d.IsTransferredToAsset,
                 AssetID = d.AssetID,
+                AssetStatus = d.Asset?.Status ?? (d.IsTransferredToAsset ? "Available" : "PendingSync"),
+                CurrentHolderName = d.Asset?.CurrentHolder?.FullName,
+                CurrentHolderCode = d.Asset?.CurrentHolder?.EmployeeCode,
                 CreatedAt = d.CreatedAt
             }).ToList()
         };
@@ -512,6 +551,26 @@ public class OrderService : IOrderService
         int totalExpected = order.Items.Sum(i => i.ExpectedQuantity);
         int totalReceived = order.Devices.Count;
 
+        int inWarehouse = 0;
+        int inUse = 0;
+        int broken = 0;
+        int maintenance = 0;
+
+        foreach (var d in order.Devices)
+        {
+            if (d.Asset != null)
+            {
+                if (d.Asset.Status == "In-Use") inUse++;
+                else if (d.Asset.Status == "Broken") broken++;
+                else if (d.Asset.Status == "Maintenance") maintenance++;
+                else inWarehouse++;
+            }
+            else
+            {
+                inWarehouse++;
+            }
+        }
+
         return new OrderSummaryDto
         {
             OrderID = order.OrderID,
@@ -529,6 +588,10 @@ public class OrderService : IOrderService
             CreatedBy = order.CreatedBy,
             TotalExpectedQuantity = totalExpected,
             TotalReceivedQuantity = totalReceived,
+            InWarehouseCount = inWarehouse,
+            InUseCount = inUse,
+            BrokenCount = broken,
+            MaintenanceCount = maintenance,
             ItemTypesCount = order.Items.Count,
             TransferredAssetsCount = order.Devices.Count(d => d.IsTransferredToAsset),
             CreatedAt = order.CreatedAt,

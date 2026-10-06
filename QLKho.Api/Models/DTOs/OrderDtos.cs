@@ -141,6 +141,12 @@ public class OrderSummaryDto
     public int ItemTypesCount { get; set; }
     public int TransferredAssetsCount { get; set; }
 
+    // Thống kê Kho & Đang cấp
+    public int InWarehouseCount { get; set; }
+    public int InUseCount { get; set; }
+    public int BrokenCount { get; set; }
+    public int MaintenanceCount { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
@@ -164,6 +170,8 @@ public class OrderItemDetailDto
     public int ReceivedQuantity { get; set; }
     public int MissingQuantity => Math.Max(0, ExpectedQuantity - ReceivedQuantity);
     public bool IsShortage => MissingQuantity > 0;
+    public int InWarehouseCount { get; set; }
+    public int InUseCount { get; set; }
     public decimal? UnitPrice { get; set; }
     public string? Note { get; set; }
 }
@@ -183,6 +191,9 @@ public class OrderDeviceItemDto
     public string? WarehouseLocation { get; set; }
     public bool IsTransferredToAsset { get; set; }
     public int? AssetID { get; set; }
+    public string AssetStatus { get; set; } = "Available";
+    public string? CurrentHolderName { get; set; }
+    public string? CurrentHolderCode { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
