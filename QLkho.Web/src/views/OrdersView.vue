@@ -597,6 +597,7 @@
                     required 
                     placeholder="Quét mã vạch hoặc nhập Serial..." 
                     ref="serialInputRef"
+                    @keydown.enter.prevent="submitSingleDevice"
                     autofocus
                   />
                 </div>
@@ -989,6 +990,27 @@ const openDetailModal = async (orderId) => {
   }
 }
 
+// Âm thanh phản hồi khi quét mã vạch
+const playBeep = (isSuccess = true) => {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext
+    if (!AudioContext) return
+    const ctx = new AudioContext()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(isSuccess ? 880 : 300, ctx.currentTime)
+    gain.gain.setValueAtTime(0.15, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.12)
+  } catch {
+    // ignore audio errors
+  }
+}
+
 // Thêm từng thiết bị (Bước 2)
 const submitSingleDevice = async () => {
   if (!singleDeviceForm.serialNumber.trim()) {
@@ -1005,6 +1027,8 @@ const submitSingleDevice = async () => {
       warehouseLocation: singleDeviceForm.warehouseLocation
     })
 
+    playBeep(true) // Tiếng tít xác nhận đã quét thành công
+
     // Reset ô serial để quét tiếp máy tiếp theo
     singleDeviceForm.serialNumber = ''
     singleDeviceForm.assetCode = ''
@@ -1018,7 +1042,11 @@ const submitSingleDevice = async () => {
       serialInputRef.value?.focus()
     })
   } catch (err) {
+    playBeep(false) // Âm trầm cảnh báo lỗi (VD: trùng serial)
     alert('Lỗi thêm thiết bị: ' + err.message)
+    nextTick(() => {
+      serialInputRef.value?.focus()
+    })
   } finally {
     submittingDevice.value = false
   }
