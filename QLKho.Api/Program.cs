@@ -51,6 +51,7 @@ builder.Services.AddScoped<QLKho.Api.Services.Interfaces.ICategoryService, QLKho
 builder.Services.AddScoped<QLKho.Api.Services.Interfaces.ISupplierService, QLKho.Api.Services.Implementations.SupplierService>();
 builder.Services.AddScoped<QLKho.Api.Services.Interfaces.IBrandService, QLKho.Api.Services.Implementations.BrandService>();
 builder.Services.AddScoped<QLKho.Api.Services.Interfaces.IOrderService, QLKho.Api.Services.Implementations.OrderService>();
+builder.Services.AddScoped<QLKho.Api.Services.Interfaces.IHandoverQrService, QLKho.Api.Services.Implementations.HandoverQrService>();
 
 // 5. Cấu hình Swagger / OpenAPI Documentation
 builder.Services.AddEndpointsApiExplorer();

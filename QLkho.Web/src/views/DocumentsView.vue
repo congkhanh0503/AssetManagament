@@ -16,14 +16,21 @@
         <p class="page-subtitle">{{ $t('documents.subtitle') }}</p>
       </div>
 
-      <button class="btn btn-primary" @click="openUploadModal">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="17 8 12 3 7 8"></polyline>
-          <line x1="12" y1="3" x2="12" y2="15"></line>
-        </svg>
-        {{ $t('documents.btn_upload') }}
-      </button>
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button class="btn btn-purple-auto" @click="isAutoSplitModalOpen = true">
+          <span style="font-size: 1.05rem;">⚡</span>
+          <span>Tự Động Quét & Tách Biên Bản (QR)</span>
+        </button>
+
+        <button class="btn btn-primary" @click="openUploadModal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          {{ $t('documents.btn_upload') }}
+        </button>
+      </div>
     </div>
 
     <!-- Quick Stats Cards -->
@@ -422,6 +429,13 @@
       </div>
     </Modal>
 
+    <!-- Modal Tự Động Nhận Diện & Tách Biên Bản PDF Bằng Mã QR -->
+    <HandoverAutoSplitModal 
+      :is-open="isAutoSplitModalOpen" 
+      @close="isAutoSplitModalOpen = false" 
+      @success="handleAutoSplitSuccess" 
+    />
+
     <!-- Toast Notification -->
     <Toast ref="toastRef" />
   </div>
@@ -435,6 +449,14 @@ import Toast from '@/components/common/Toast.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import EmployeeSelector from '@/components/common/EmployeeSelector.vue'
 import AssetSelector from '@/components/common/AssetSelector.vue'
+import HandoverAutoSplitModal from '@/components/common/HandoverAutoSplitModal.vue'
+
+const isAutoSplitModalOpen = ref(false)
+
+const handleAutoSplitSuccess = () => {
+  fetchDocuments()
+  toastRef.value?.show('Hệ thống đã nhận diện, tách và gán biên bản bàn giao thành công!', 'success')
+}
 
 const documents = ref([])
 const assets = ref([])
@@ -1061,5 +1083,26 @@ onMounted(() => {
   color: #fbbf24;
   font-size: 0.75rem;
   line-height: 1.4;
+}
+
+.btn-purple-auto {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+  transition: all 0.2s;
+}
+
+.btn-purple-auto:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.35);
 }
 </style>

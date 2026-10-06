@@ -253,6 +253,7 @@ export const brandsApi = {
 export const documentsApi = {
   getAll: (params = {}) => apiClient.get('/documents', { params }),
   upload: (formData) => apiClient.post('/documents/upload', formData),
+  autoSplitHandover: (formData) => apiClient.post('/documents/auto-split-handover', formData),
   delete: (id) => apiClient.delete(`/documents/${id}`),
   getDownloadUrl: (id) => `/api/documents/${id}/download`,
   getFileUrl: (filePath) => (filePath?.startsWith('http') ? filePath : (filePath?.startsWith('/') ? filePath : `/${filePath || ''}`))

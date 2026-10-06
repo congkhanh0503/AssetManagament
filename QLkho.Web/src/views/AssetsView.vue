@@ -18,6 +18,11 @@
           📋 Import Cấp Phát
         </button>
 
+        <!-- Nút Tự Động Quét & Tách Biên Bản PDF (QR) -->
+        <button type="button" class="btn btn-purple-qr" @click="isAutoSplitModalOpen = true" title="Tải lên file PDF scan tổng, tự động nhận diện QR và gán biên bản">
+          ⚡ Quét Biên Bản (QR)
+        </button>
+
         <!-- Nút Import Excel -->
         <button type="button" class="btn btn-secondary" @click="isImportOpen = true">
           📥 {{ $t('assets.btn_import') }}
@@ -275,6 +280,13 @@
       </form>
     </Modal>
 
+    <!-- 14. MODAL TỰ ĐỘNG NHẬN DIỆN & TÁCH BIÊN BẢN SCAN (QR CODE) -->
+    <HandoverAutoSplitModal 
+      :is-open="isAutoSplitModalOpen" 
+      @close="isAutoSplitModalOpen = false" 
+      @success="handleAutoSplitSuccess" 
+    />
+
     <!-- TOAST THÔNG BÁO -->
     <Toast ref="toastRef" />
   </div>
@@ -287,6 +299,7 @@ import { getRowValue } from '@/utils/excelImport'
 import Modal from '@/components/common/Modal.vue'
 import Toast from '@/components/common/Toast.vue'
 import HandoverHistoryModal from '@/components/assets/HandoverHistoryModal.vue'
+import HandoverAutoSplitModal from '@/components/common/HandoverAutoSplitModal.vue'
 
 // Import các sub-components đã tách nhỏ
 import AssetsFilterBar from './AssetsView/AssetsFilterBar.vue'
@@ -302,6 +315,13 @@ import AssetHandoverImportModal from './AssetsView/AssetHandoverImportModal.vue'
 import AssetPrintModal from './AssetsView/AssetPrintModal.vue'
 import AssetWarrantyModal from './AssetsView/AssetWarrantyModal.vue'
 import AssetBrandModal from './AssetsView/AssetBrandModal.vue'
+
+const isAutoSplitModalOpen = ref(false)
+
+const handleAutoSplitSuccess = () => {
+  fetchAssets()
+  toastRef.value?.show('Đã nhận diện, tách và gán biên bản bàn giao thành công!', 'success')
+}
 
 // State dữ liệu chính
 const assets = ref([])
@@ -1269,5 +1289,25 @@ onMounted(async () => {
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 999px;
+}
+
+.btn-purple-qr {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: #ffffff;
+  border: none;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.25);
+  transition: all 0.2s;
+}
+
+.btn-purple-qr:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(109, 40, 217, 0.35);
 }
 </style>

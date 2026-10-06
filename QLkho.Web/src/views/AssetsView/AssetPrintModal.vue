@@ -18,7 +18,10 @@
             <h2 class="h-doc-title-en">Confirm equipment delivery information</h2>
             <h3 class="h-doc-title-vn">Xác nhận thông tin cung cấp thiết bị</h3>
           </div>
-          <div class="h-header-spacer"></div>
+          <div class="h-qr-box">
+            <img v-if="qrCodeDataUrl" :src="qrCodeDataUrl" alt="QR Code" class="h-qr-img" />
+            <div class="h-qr-caption">{{ qrCaption }}</div>
+          </div>
         </div>
 
         <!-- 2. Hàng Ngày Tháng -->
@@ -285,6 +288,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
+import QRCode from 'qrcode'
 import Modal from '@/components/common/Modal.vue'
 import companyLogo from '@/components/assets/img/logo.png'
 
@@ -316,9 +320,39 @@ defineEmits(['close'])
 const isWithMouse = ref(false)
 const accountInfo = ref('')
 const passwordInfo = ref('@9e7w9qS@KTF')
+const qrCodeDataUrl = ref('')
+
+const qrCaption = computed(() => {
+  const empCode = props.asset?.holderCode || 'EMP'
+  const astCode = props.asset?.assetCode || 'AST'
+  return `HB-${empCode}-${astCode}`
+})
+
+const generateQrCode = async () => {
+  const empCode = props.asset?.holderCode || ''
+  const astCode = props.asset?.assetCode || ''
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  
+  // Format token nhận diện: HB|{empCode}|{astCode}|{today}
+  const payload = `HB|${empCode}|${astCode}|${today}`
+  try {
+    qrCodeDataUrl.value = await QRCode.toDataURL(payload, {
+      width: 90,
+      margin: 1,
+      errorCorrectionLevel: 'M',
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
+    })
+  } catch (err) {
+    console.warn('Lỗi sinh mã QR:', err)
+  }
+}
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
+    generateQrCode()
     nextTick(() => {
       const modalBodies = document.querySelectorAll('.modal-body')
       modalBodies.forEach(b => { b.scrollTop = 0 })
@@ -703,5 +737,30 @@ const handlePrint = () => {
     box-shadow: none !important;
     height: auto !important;
   }
+}
+
+/* QR Code Box */
+.h-qr-box {
+  width: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.h-qr-img {
+  width: 72px;
+  height: 72px;
+  display: block;
+}
+
+.h-qr-caption {
+  font-size: 6.5pt;
+  font-weight: 700;
+  font-family: monospace;
+  color: #0f172a;
+  margin-top: 1px;
+  text-align: center;
+  white-space: nowrap;
 }
 </style>

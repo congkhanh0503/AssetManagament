@@ -12,11 +12,16 @@ public class DocumentsController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IWebHostEnvironment _env;
+    private readonly QLKho.Api.Services.Interfaces.IHandoverQrService _handoverQrService;
 
-    public DocumentsController(AppDbContext context, IWebHostEnvironment env)
+    public DocumentsController(
+        AppDbContext context, 
+        IWebHostEnvironment env,
+        QLKho.Api.Services.Interfaces.IHandoverQrService handoverQrService)
     {
         _context = context;
         _env = env;
+        _handoverQrService = handoverQrService;
     }
 
     // GET: api/documents
@@ -207,6 +212,24 @@ public class DocumentsController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(new { message = "Đã xóa tài liệu thành công!" });
+    }
+
+    // POST: api/documents/auto-split-handover
+    [HttpPost("auto-split-handover")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<HandoverAutoSplitResultDto>> AutoSplitHandoverPdf([FromForm] IFormFile pdfFile, [FromForm] string? uploadedBy = "Admin")
+    {
+        if (pdfFile == null || pdfFile.Length == 0)
+        {
+            return BadRequest(new HandoverAutoSplitResultDto
+            {
+                Success = false,
+                Message = "Vui lòng chọn file PDF scan chứa các biên bản bàn giao."
+            });
+        }
+
+        var result = await _handoverQrService.ProcessBatchHandoverPdfAsync(pdfFile, uploadedBy);
+        return Ok(result);
     }
 
     private static string GetDocumentTypeLabel(string type)
