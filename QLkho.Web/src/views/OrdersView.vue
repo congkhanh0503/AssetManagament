@@ -73,6 +73,20 @@
           <div class="kpi-val" style="color: #059669;">{{ kpiStats.completed }}</div>
         </div>
       </div>
+      <div class="glass-card kpi-card highlight-stock">
+        <div class="kpi-icon-box emerald">🏢</div>
+        <div>
+          <div class="kpi-label">Kho thiết bị</div>
+          <div class="kpi-val" style="color: #059669;">{{ kpiStats.totalInWarehouse }} <span class="kpi-unit">máy</span></div>
+        </div>
+      </div>
+      <div class="glass-card kpi-card highlight-inuse">
+        <div class="kpi-icon-box purple">👤</div>
+        <div>
+          <div class="kpi-label">Đang cấp phát</div>
+          <div class="kpi-val" style="color: #2563eb;">{{ kpiStats.totalInUse }} <span class="kpi-unit">máy</span></div>
+        </div>
+      </div>
     </div>
 
     <!-- Bộ Lọc & Tìm Kiếm -->
@@ -155,8 +169,9 @@
               <th style="width: 260px;">TÊN ĐƠN HÀNG</th>
               <th style="width: 170px;">DỰ ÁN</th>
               <th style="width: 130px;">NGÀY TẠO</th>
-              <th style="width: 220px;">TIẾN ĐỘ NHẬN THIẾT BỊ</th>
-              <th style="width: 140px;">TRẠNG THÁI</th>
+              <th style="width: 190px;">TIẾN ĐỘ NHẬN THIẾT BỊ</th>
+              <th style="width: 165px;">KHO / ĐANG CẤP</th>
+              <th style="width: 135px;">TRẠNG THÁI</th>
               <th style="width: 170px; text-align: right;">THAO TÁC</th>
             </tr>
           </thead>
@@ -200,11 +215,25 @@
                     ></div>
                   </div>
                   <div class="progress-text-row">
-                    <span><strong>{{ order.totalReceivedQuantity }}</strong> / {{ order.totalExpectedQuantity }} thiết bị</span>
+                    <span><strong>{{ order.totalReceivedQuantity }}</strong> / {{ order.totalExpectedQuantity }} máy</span>
                     <span class="percent-text">{{ getProgressPercent(order) }}%</span>
                   </div>
                   <div v-if="order.hasWarning" class="shortage-warning-badge">
                     ⚠️ Thiếu {{ order.missingQuantity }} máy (vận chuyển thiếu)
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="allocation-badges">
+                  <div class="alloc-badge stock" title="Số thiết bị thuộc đơn đang nằm trong kho">
+                    <span class="alloc-dot green"></span>
+                    <span class="alloc-txt">Kho:</span>
+                    <strong class="alloc-num">{{ order.inWarehouseCount || 0 }}</strong>
+                  </div>
+                  <div class="alloc-badge inuse" title="Số thiết bị thuộc đơn đã được cấp phát cho nhân viên">
+                    <span class="alloc-dot blue"></span>
+                    <span class="alloc-txt">Đang cấp:</span>
+                    <strong class="alloc-num">{{ order.inUseCount || 0 }}</strong>
                   </div>
                 </div>
               </td>
@@ -433,6 +462,14 @@
                 <span :class="getStatusBadgeClass(currentOrder.status)">
                   {{ getStatusText(currentOrder.status) }}
                 </span>
+                <div class="modal-allocation-tags">
+                  <span class="modal-alloc-tag stock" title="Số lượng thiết bị đang nằm trong kho">
+                    🏢 Kho: <strong>{{ currentOrder.inWarehouseCount || 0 }}</strong>
+                  </span>
+                  <span class="modal-alloc-tag inuse" title="Số lượng thiết bị đã cấp phát cho nhân viên">
+                    👤 Đang cấp: <strong>{{ currentOrder.inUseCount || 0 }}</strong>
+                  </span>
+                </div>
               </div>
               <p class="modal-subtitle">
                 <span v-if="currentOrder.isProjectBased && currentOrder.projectName" class="proj-highlight">
@@ -467,6 +504,9 @@
               <h3>Bảng Đối Soát Số Lượng Từng Loại Thiết Bị</h3>
               <div class="reconcile-stat">
                 Đã nhận: <strong style="color: #2563eb;">{{ currentOrder.totalReceivedQuantity }}</strong> / {{ currentOrder.totalExpectedQuantity }} máy
+                <span class="reconcile-sub-stat">
+                  (🏢 Kho: <strong>{{ currentOrder.inWarehouseCount || 0 }}</strong> | 👤 Đang cấp: <strong>{{ currentOrder.inUseCount || 0 }}</strong>)
+                </span>
               </div>
             </div>
 
@@ -476,9 +516,11 @@
                   <th>Loại Thiết Bị</th>
                   <th>Model</th>
                   <th>Cấu Hình</th>
-                  <th style="width: 100px; text-align: center;">SL Đặt</th>
-                  <th style="width: 100px; text-align: center;">Đã Nhận</th>
-                  <th style="width: 130px; text-align: center;">Tình Trạng</th>
+                  <th style="width: 80px; text-align: center;">SL Đặt</th>
+                  <th style="width: 80px; text-align: center;">Đã Nhận</th>
+                  <th style="width: 90px; text-align: center;">Trong Kho</th>
+                  <th style="width: 90px; text-align: center;">Đang Cấp</th>
+                  <th style="width: 120px; text-align: center;">Tình Trạng</th>
                 </tr>
               </thead>
               <tbody>
@@ -488,6 +530,12 @@
                   <td class="spec-cell-mini" :title="it.specifications">{{ it.specifications || '---' }}</td>
                   <td style="text-align: center; font-weight: 600;">{{ it.expectedQuantity }}</td>
                   <td style="text-align: center; font-weight: 700; color: #2563eb;">{{ it.receivedQuantity }}</td>
+                  <td style="text-align: center;">
+                    <span class="cell-pill stock">🏢 {{ it.inWarehouseCount || 0 }}</span>
+                  </td>
+                  <td style="text-align: center;">
+                    <span class="cell-pill inuse">👤 {{ it.inUseCount || 0 }}</span>
+                  </td>
                   <td style="text-align: center;">
                     <span v-if="it.isShortage" class="status-badge-shortage">
                       ⚠️ Thiếu {{ it.missingQuantity }}
@@ -624,12 +672,13 @@
               <table class="sub-table device-grid-table">
                 <thead>
                   <tr>
-                    <th style="width: 40px;">#</th>
-                    <th style="width: 140px;">MÃ TÀI SẢN</th>
-                    <th style="width: 180px;">SERIAL NUMBER</th>
+                    <th style="width: 35px;">#</th>
+                    <th style="width: 130px;">MÃ TÀI SẢN</th>
+                    <th style="width: 160px;">SERIAL NUMBER</th>
                     <th>TÊN THIẾT BỊ</th>
-                    <th style="width: 150px;">ĐỒNG BỘ VÀO KHO</th>
-                    <th style="width: 70px; text-align: center;">XÓA</th>
+                    <th style="width: 200px;">HIỆN TRẠNG / VỊ TRÍ</th>
+                    <th style="width: 135px;">ĐỒNG BỘ VÀO KHO</th>
+                    <th style="width: 55px; text-align: center;">XÓA</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -638,6 +687,25 @@
                     <td><span class="code-badge mini">{{ dev.assetCode }}</span></td>
                     <td><strong class="sn-text-bold">{{ dev.serialNumber || '---' }}</strong></td>
                     <td>{{ dev.assetName }}</td>
+                    <td>
+                      <div v-if="dev.assetStatus === 'In-Use'" class="holder-info" :title="dev.currentHolderName">
+                        <span class="alloc-dot blue"></span>
+                        <span class="holder-name">👤 {{ dev.currentHolderName || 'Đang cấp phát' }}</span>
+                        <span v-if="dev.currentHolderCode" class="holder-code">({{ dev.currentHolderCode }})</span>
+                      </div>
+                      <div v-else-if="dev.assetStatus === 'Broken'" class="holder-info text-danger">
+                        <span class="alloc-dot red"></span>
+                        <span>🛠️ Hỏng hóc</span>
+                      </div>
+                      <div v-else-if="dev.assetStatus === 'Maintenance'" class="holder-info text-warning">
+                        <span class="alloc-dot amber"></span>
+                        <span>🔧 Đang bảo trì</span>
+                      </div>
+                      <div v-else class="holder-info">
+                        <span class="alloc-dot green"></span>
+                        <span class="stock-loc">🏢 Trong kho ({{ dev.warehouseLocation || 'Kho IT' }})</span>
+                      </div>
+                    </td>
                     <td>
                       <span v-if="dev.isTransferredToAsset" class="badge-synced">
                         ✅ Đã vào Kho Tài sản
@@ -745,7 +813,9 @@ const kpiStats = computed(() => {
   const receiving = orders.value.filter(o => o.status === 'Receiving').length
   const completed = orders.value.filter(o => o.status === 'Completed').length
   const shortage = orders.value.filter(o => o.hasWarning).length
-  return { pending, receiving, completed, shortage }
+  const totalInWarehouse = orders.value.reduce((sum, o) => sum + (o.inWarehouseCount || 0), 0)
+  const totalInUse = orders.value.reduce((sum, o) => sum + (o.inUseCount || 0), 0)
+  return { pending, receiving, completed, shortage, totalInWarehouse, totalInUse }
 })
 
 // Lọc đơn hàng
@@ -2019,5 +2089,159 @@ onMounted(() => {
 .btn-sync-assets:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Allocation & In-Warehouse / In-Use Badges */
+.kpi-unit {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.kpi-icon-box.emerald {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.kpi-icon-box.purple {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.kpi-card.highlight-stock {
+  border-color: #a7f3d0;
+  background: linear-gradient(to bottom right, #ffffff, #f0fdf4);
+}
+
+.kpi-card.highlight-inuse {
+  border-color: #bfdbfe;
+  background: linear-gradient(to bottom right, #ffffff, #eff6ff);
+}
+
+.allocation-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.alloc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.775rem;
+  line-height: 1.2;
+}
+
+.alloc-badge.stock {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.alloc-badge.inuse {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+.alloc-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.alloc-dot.green { background: #10b981; }
+.alloc-dot.blue { background: #3b82f6; }
+.alloc-dot.red { background: #ef4444; }
+.alloc-dot.amber { background: #f59e0b; }
+
+.alloc-badge.stock .alloc-txt { color: #047857; font-size: 0.725rem; }
+.alloc-badge.inuse .alloc-txt { color: #1d4ed8; font-size: 0.725rem; }
+
+.alloc-num {
+  font-weight: 800;
+  font-size: 0.825rem;
+}
+
+.modal-allocation-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+.modal-alloc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.775rem;
+  font-weight: 600;
+}
+
+.modal-alloc-tag.stock {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.modal-alloc-tag.inuse {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.reconcile-sub-stat {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  margin-left: 6px;
+}
+
+.cell-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.775rem;
+  font-weight: 700;
+}
+
+.cell-pill.stock {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.cell-pill.inuse {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.holder-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+
+.holder-name {
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.holder-code {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.stock-loc {
+  color: #059669;
+  font-weight: 500;
 }
 </style>
