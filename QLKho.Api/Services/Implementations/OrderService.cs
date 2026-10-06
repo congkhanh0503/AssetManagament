@@ -278,6 +278,35 @@ public class OrderService : IOrderService
             .FirstOrDefaultAsync(i => i.OrderItemID == dto.OrderItemID && i.OrderID == orderId);
         if (item == null) throw new KeyNotFoundException("Dòng thiết bị không thuộc đơn hàng này.");
 
+        string serialNumber = dto.SerialNumber?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(serialNumber))
+        {
+            throw new InvalidOperationException("Vui lòng cung cấp số Serial Number của thiết bị.");
+        }
+
+        // 1. Kiểm tra xem Serial đã tồn tại trong chính đơn hàng này chưa
+        bool isDuplicateInThisOrder = await _context.OrderDeviceItems.AnyAsync(d =>
+            d.OrderID == orderId &&
+            d.SerialNumber != null &&
+            d.SerialNumber.ToLower() == serialNumber.ToLower()
+        );
+
+        if (isDuplicateInThisOrder)
+        {
+            throw new InvalidOperationException($"Mã Serial '{serialNumber}' đã tồn tại trong đơn hàng này! Không thể thêm trùng lặp.");
+        }
+
+        // 2. Kiểm tra xem Serial đã tồn tại trong hệ thống Quản lý tài sản (Assets) chưa
+        bool isDuplicateInAssets = await _context.Assets.AnyAsync(a =>
+            a.SerialNumber != null &&
+            a.SerialNumber.ToLower() == serialNumber.ToLower()
+        );
+
+        if (isDuplicateInAssets)
+        {
+            throw new InvalidOperationException($"Mã Serial '{serialNumber}' đã tồn tại trên hệ thống Quản lý tài sản (máy đã có trong kho hoặc đã cấp)! Vui lòng kiểm tra lại.");
+        }
+
         // Sinh mã tài sản tự động nếu chưa có
         string assetCode = dto.AssetCode?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(assetCode))
@@ -296,7 +325,7 @@ public class OrderService : IOrderService
             OrderID = orderId,
             OrderItemID = item.OrderItemID,
             AssetCode = assetCode,
-            SerialNumber = dto.SerialNumber?.Trim(),
+            SerialNumber = serialNumber,
             AssetName = assetName,
             CategoryID = item.CategoryID,
             Brand = item.Brand,
@@ -318,7 +347,20 @@ public class OrderService : IOrderService
         }
         order.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+        {
+            if (ex.InnerException?.Message.Contains("uq_order_device_items") == true ||
+                ex.Message.Contains("uq_order_device_items") ||
+                ex.InnerException?.Message.Contains("order_device_items") == true)
+            {
+                throw new InvalidOperationException($"Mã Serial '{serialNumber}' đã tồn tại trong đơn hàng này! Không thể thêm trùng lặp.");
+            }
+            throw;
+        }
 
         return new OrderDeviceItemDto
         {
@@ -353,10 +395,39 @@ public class OrderService : IOrderService
         var cleanSerials = dto.SerialNumbers
             .Where(s => !string.IsNullOrWhiteSpace(s))
             .Select(s => s.Trim())
-            .Distinct()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         if (!cleanSerials.Any()) return result;
+
+        // Kiểm tra xem có Serial nào đã có trong đơn hàng này chưa
+        var existingInOrder = await _context.OrderDeviceItems
+            .Where(d => d.OrderID == orderId && d.SerialNumber != null)
+            .Select(d => d.SerialNumber!.ToLower())
+            .ToListAsync();
+
+        var lowerCleanSerials = cleanSerials.Select(s => s.ToLower()).ToList();
+        var existingInAssets = await _context.Assets
+            .Where(a => a.SerialNumber != null && lowerCleanSerials.Contains(a.SerialNumber.ToLower()))
+            .Select(a => a.SerialNumber!.ToLower())
+            .ToListAsync();
+
+        var duplicateInOrder = cleanSerials.Where(s => existingInOrder.Contains(s.ToLower())).ToList();
+        var duplicateInAssets = cleanSerials.Where(s => existingInAssets.Contains(s.ToLower())).ToList();
+
+        if (duplicateInOrder.Any() || duplicateInAssets.Any())
+        {
+            var errMsgs = new List<string>();
+            if (duplicateInOrder.Any())
+            {
+                errMsgs.Add($"Đã có trong đơn này: {string.Join(", ", duplicateInOrder.Take(3))}{(duplicateInOrder.Count > 3 ? $" và {duplicateInOrder.Count - 3} máy khác" : "")}");
+            }
+            if (duplicateInAssets.Any())
+            {
+                errMsgs.Add($"Đã có trong kho tài sản: {string.Join(", ", duplicateInAssets.Take(3))}{(duplicateInAssets.Count > 3 ? $" và {duplicateInAssets.Count - 3} máy khác" : "")}");
+            }
+            throw new InvalidOperationException($"Phát hiện mã Serial bị trùng! {string.Join(" | ", errMsgs)}");
+        }
 
         int currentMaxNum = await GetMaxAssetCodeNumberAsync(dto.AssetCodePrefix ?? GetPrefixByCategory(item.CategoryID, item.ModelName));
 
@@ -395,7 +466,20 @@ public class OrderService : IOrderService
         }
         order.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+        {
+            if (ex.InnerException?.Message.Contains("uq_order_device_items") == true ||
+                ex.Message.Contains("uq_order_device_items") ||
+                ex.InnerException?.Message.Contains("order_device_items") == true)
+            {
+                throw new InvalidOperationException("Có mã Serial bị trùng trong đơn hàng này! Không thể thêm thiết bị trùng lặp.");
+            }
+            throw;
+        }
 
         var addedDevices = await _context.OrderDeviceItems
             .Where(d => d.OrderID == orderId && d.OrderItemID == item.OrderItemID)

@@ -142,6 +142,10 @@ public class AppDbContext : DbContext
             .HasForeignKey(od => od.AssetID)
             .OnDelete(DeleteBehavior.SetNull);
 
+        modelBuilder.Entity<OrderDeviceItem>()
+            .HasIndex(od => new { od.OrderID, od.SerialNumber })
+            .IsUnique();
+
         modelBuilder.Entity<Asset>()
             .HasOne(a => a.Order)
             .WithMany()

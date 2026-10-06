@@ -597,7 +597,6 @@
                     required 
                     placeholder="Quét mã vạch hoặc nhập Serial..." 
                     ref="serialInputRef"
-                    @keydown.enter.prevent="submitSingleDevice"
                     autofocus
                   />
                 </div>
@@ -1000,12 +999,12 @@ const playBeep = (isSuccess = true) => {
     const gain = ctx.createGain()
     osc.connect(gain)
     gain.connect(ctx.destination)
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(isSuccess ? 880 : 300, ctx.currentTime)
-    gain.gain.setValueAtTime(0.15, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12)
+    osc.type = isSuccess ? 'sine' : 'sawtooth'
+    osc.frequency.setValueAtTime(isSuccess ? 880 : 200, ctx.currentTime)
+    gain.gain.setValueAtTime(0.2, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + (isSuccess ? 0.12 : 0.4))
     osc.start()
-    osc.stop(ctx.currentTime + 0.12)
+    osc.stop(ctx.currentTime + (isSuccess ? 0.12 : 0.4))
   } catch {
     // ignore audio errors
   }
@@ -1013,8 +1012,27 @@ const playBeep = (isSuccess = true) => {
 
 // Thêm từng thiết bị (Bước 2)
 const submitSingleDevice = async () => {
-  if (!singleDeviceForm.serialNumber.trim()) {
-    alert('Vui lòng nhập số Serial!')
+  if (submittingDevice.value) return // Chặn gửi 2 lần liên tiếp
+
+  const rawSerial = singleDeviceForm.serialNumber?.trim()
+  if (!rawSerial) {
+    alert('Vui lòng nhập hoặc quét số Serial!')
+    nextTick(() => serialInputRef.value?.focus())
+    return
+  }
+
+  // 1. Chặn ngay tại Client: Kiểm tra trùng mã Serial với các thiết bị đã có trong đơn hàng này
+  const duplicateDevice = currentOrder.value?.devices?.find(
+    d => d.serialNumber && d.serialNumber.trim().toLowerCase() === rawSerial.toLowerCase()
+  )
+
+  if (duplicateDevice) {
+    playBeep(false) // Âm cảnh báo lỗi
+    alert(`⚠️ CẢNH BÁO TRÙNG MÃ SERIAL!\n\nThiết bị có số Serial: "${rawSerial}" đã được quét trong đơn hàng này rồi!\n(Mã tài sản: ${duplicateDevice.assetCode || 'Chưa gán'})\n\n❌ Hệ thống đã CHẶN không cho thêm lặp lại. Vui lòng kiểm tra lại thiết bị!`)
+    singleDeviceForm.serialNumber = ''
+    nextTick(() => {
+      serialInputRef.value?.focus()
+    })
     return
   }
 
@@ -1022,8 +1040,8 @@ const submitSingleDevice = async () => {
   try {
     await ordersApi.addDevice(currentOrder.value.orderID, {
       orderItemID: singleDeviceForm.orderItemID,
-      serialNumber: singleDeviceForm.serialNumber.trim(),
-      assetCode: singleDeviceForm.assetCode.trim() || undefined,
+      serialNumber: rawSerial,
+      assetCode: singleDeviceForm.assetCode?.trim() || undefined,
       warehouseLocation: singleDeviceForm.warehouseLocation
     })
 
@@ -1042,8 +1060,9 @@ const submitSingleDevice = async () => {
       serialInputRef.value?.focus()
     })
   } catch (err) {
-    playBeep(false) // Âm trầm cảnh báo lỗi (VD: trùng serial)
-    alert('Lỗi thêm thiết bị: ' + err.message)
+    playBeep(false) // Âm trầm cảnh báo lỗi (VD: trùng serial trong kho)
+    alert('❌ Không thể thêm thiết bị:\n' + err.message)
+    singleDeviceForm.serialNumber = ''
     nextTick(() => {
       serialInputRef.value?.focus()
     })
@@ -1054,6 +1073,8 @@ const submitSingleDevice = async () => {
 
 // Thêm hàng loạt thiết bị (Bước 2)
 const submitBulkDevices = async () => {
+  if (submittingDevice.value) return
+
   const lines = bulkDeviceForm.serialText
     .split('\n')
     .map(s => s.trim())
@@ -1061,6 +1082,38 @@ const submitBulkDevices = async () => {
 
   if (lines.length === 0) {
     alert('Vui lòng dán danh sách Serial Number!')
+    return
+  }
+
+  // 1. Kiểm tra trùng lặp trong chính danh sách dán vào
+  const lowerMap = new Map()
+  const internalDups = []
+  for (const sn of lines) {
+    const lower = sn.toLowerCase()
+    if (lowerMap.has(lower)) {
+      if (!internalDups.includes(sn)) internalDups.push(sn)
+    } else {
+      lowerMap.set(lower, sn)
+    }
+  }
+
+  if (internalDups.length > 0) {
+    playBeep(false)
+    alert(`⚠️ CẢNH BÁO: Danh sách bạn dán có các mã Serial bị trùng nhau:\n- ${internalDups.join('\n- ')}\n\nVui lòng lọc bỏ các dòng trùng lặp trước khi thêm!`)
+    return
+  }
+
+  // 2. Kiểm tra trùng với các máy đã có trong đơn hàng
+  const currentSerials = new Set(
+    (currentOrder.value?.devices || [])
+      .map(d => d.serialNumber?.trim().toLowerCase())
+      .filter(Boolean)
+  )
+
+  const dupsWithCurrentOrder = lines.filter(sn => currentSerials.has(sn.toLowerCase()))
+  if (dupsWithCurrentOrder.length > 0) {
+    playBeep(false)
+    alert(`⚠️ CẢNH BÁO: Các mã Serial sau ĐÃ CÓ trong đơn hàng này:\n- ${dupsWithCurrentOrder.join('\n- ')}\n\nKhông thể thêm trùng lặp!`)
     return
   }
 
@@ -1072,15 +1125,17 @@ const submitBulkDevices = async () => {
       warehouseLocation: bulkDeviceForm.warehouseLocation
     })
 
+    playBeep(true)
     bulkDeviceForm.serialText = ''
 
     // Refresh lại chi tiết đơn
     const updated = await ordersApi.getById(currentOrder.value.orderID)
     currentOrder.value = updated
     await fetchOrders()
-    alert(`Đã thêm thành công ${lines.length} thiết bị vào đơn!`)
+    alert(`✅ Đã thêm thành công ${lines.length} thiết bị vào đơn!`)
   } catch (err) {
-    alert('Lỗi thêm hàng loạt: ' + err.message)
+    playBeep(false)
+    alert('❌ Lỗi thêm hàng loạt:\n' + err.message)
   } finally {
     submittingDevice.value = false
   }
