@@ -583,7 +583,7 @@
                   <label class="form-label">Chọn Loại Thiết Bị <span class="req">*</span></label>
                   <select class="form-control" v-model="singleDeviceForm.orderItemID" required>
                     <option v-for="it in currentOrder.items" :key="it.orderItemID" :value="it.orderItemID">
-                      {{ it.modelName }} (Đã nhận: {{ it.receivedQuantity }}/{{ it.expectedQuantity }})
+                      {{ it.modelName }} {{ it.receivedQuantity >= it.expectedQuantity ? '(✅ ĐÃ ĐỦ ' + it.receivedQuantity + '/' + it.expectedQuantity + ')' : '(⚡ Cần nhập: ' + it.receivedQuantity + '/' + it.expectedQuantity + ')' }}
                     </option>
                   </select>
                 </div>
@@ -626,7 +626,7 @@
                 <label class="form-label">Chọn Loại Thiết Bị Cần Nhập <span class="req">*</span></label>
                 <select class="form-control" v-model="bulkDeviceForm.orderItemID" required>
                   <option v-for="it in currentOrder.items" :key="it.orderItemID" :value="it.orderItemID">
-                    {{ it.modelName }} (Đã nhận: {{ it.receivedQuantity }}/{{ it.expectedQuantity }})
+                    {{ it.modelName }} {{ it.receivedQuantity >= it.expectedQuantity ? '(✅ ĐÃ ĐỦ ' + it.receivedQuantity + '/' + it.expectedQuantity + ')' : '(⚡ Cần nhập: ' + it.receivedQuantity + '/' + it.expectedQuantity + ')' }}
                   </option>
                 </select>
               </div>
@@ -970,10 +970,11 @@ const openDetailModal = async (orderId) => {
     const detail = await ordersApi.getById(orderId)
     currentOrder.value = detail
     
-    // Gán mặc định dòng thiết bị đầu tiên cho form nhập
+    // Gán mặc định dòng thiết bị còn thiếu đầu tiên cho form nhập (nếu đã đủ hết thì lấy dòng đầu)
     if (detail.items && detail.items.length > 0) {
-      singleDeviceForm.orderItemID = detail.items[0].orderItemID
-      bulkDeviceForm.orderItemID = detail.items[0].orderItemID
+      const shortageItem = detail.items.find(it => it.receivedQuantity < it.expectedQuantity) || detail.items[0]
+      singleDeviceForm.orderItemID = shortageItem.orderItemID
+      bulkDeviceForm.orderItemID = shortageItem.orderItemID
     }
     singleDeviceForm.serialNumber = ''
     singleDeviceForm.assetCode = ''
@@ -1021,7 +1022,17 @@ const submitSingleDevice = async () => {
     return
   }
 
-  // 1. Chặn ngay tại Client: Kiểm tra trùng mã Serial với các thiết bị đã có trong đơn hàng này
+  // 1. Chặn ngay tại Client nếu dòng thiết bị này đã nhận đủ số lượng
+  const selectedItem = currentOrder.value?.items?.find(it => it.orderItemID === singleDeviceForm.orderItemID)
+  if (selectedItem && selectedItem.receivedQuantity >= selectedItem.expectedQuantity) {
+    playBeep(false) // Âm cảnh báo lỗi
+    alert(`⚠️ ĐÃ NHẬN ĐỦ SỐ LƯỢNG!\n\nLoại thiết bị "${selectedItem.modelName}" đã nhận đủ ${selectedItem.receivedQuantity}/${selectedItem.expectedQuantity} máy theo đơn đặt hàng.\n\n❌ Hệ thống đã CHẶN không cho quét thêm vào loại này! Vui lòng chọn loại thiết bị khác còn thiếu trong đơn.`)
+    singleDeviceForm.serialNumber = ''
+    nextTick(() => serialInputRef.value?.focus())
+    return
+  }
+
+  // 2. Chặn ngay tại Client: Kiểm tra trùng mã Serial với các thiết bị đã có trong đơn hàng này
   const duplicateDevice = currentOrder.value?.devices?.find(
     d => d.serialNumber && d.serialNumber.trim().toLowerCase() === rawSerial.toLowerCase()
   )
@@ -1056,6 +1067,16 @@ const submitSingleDevice = async () => {
     currentOrder.value = updated
     await fetchOrders()
 
+    // Tự động chuyển sang loại thiết bị còn thiếu tiếp theo nếu loại này đã đủ máy
+    const currentItem = updated.items?.find(it => it.orderItemID === singleDeviceForm.orderItemID)
+    if (currentItem && currentItem.receivedQuantity >= currentItem.expectedQuantity) {
+      const nextShortageItem = updated.items?.find(it => it.receivedQuantity < it.expectedQuantity)
+      if (nextShortageItem) {
+        singleDeviceForm.orderItemID = nextShortageItem.orderItemID
+        bulkDeviceForm.orderItemID = nextShortageItem.orderItemID
+      }
+    }
+
     nextTick(() => {
       serialInputRef.value?.focus()
     })
@@ -1083,6 +1104,22 @@ const submitBulkDevices = async () => {
   if (lines.length === 0) {
     alert('Vui lòng dán danh sách Serial Number!')
     return
+  }
+
+  // Kiểm tra số lượng còn thiếu của dòng này
+  const selectedItem = currentOrder.value?.items?.find(it => it.orderItemID === bulkDeviceForm.orderItemID)
+  if (selectedItem) {
+    const remaining = selectedItem.expectedQuantity - selectedItem.receivedQuantity
+    if (remaining <= 0) {
+      playBeep(false)
+      alert(`⚠️ ĐÃ NHẬN ĐỦ SỐ LƯỢNG!\n\nLoại thiết bị "${selectedItem.modelName}" đã nhận đủ (${selectedItem.receivedQuantity}/${selectedItem.expectedQuantity} máy).\n\n❌ Không thể thêm tiếp vào loại này!`)
+      return
+    }
+    if (lines.length > remaining) {
+      playBeep(false)
+      alert(`⚠️ VƯỢT QUÁ SỐ LƯỢNG CÒN THIẾU!\n\nLoại thiết bị "${selectedItem.modelName}" chỉ còn cần nhập thêm ${remaining} máy nữa (đã nhận ${selectedItem.receivedQuantity}/${selectedItem.expectedQuantity}), nhưng danh sách bạn dán có tới ${lines.length} máy.\n\n❌ Vui lòng điều chỉnh lại danh sách Serial!`)
+      return
+    }
   }
 
   // 1. Kiểm tra trùng lặp trong chính danh sách dán vào

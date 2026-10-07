@@ -278,6 +278,13 @@ public class OrderService : IOrderService
             .FirstOrDefaultAsync(i => i.OrderItemID == dto.OrderItemID && i.OrderID == orderId);
         if (item == null) throw new KeyNotFoundException("Dòng thiết bị không thuộc đơn hàng này.");
 
+        // Kiểm tra xem dòng thiết bị này đã nhận đủ số lượng theo đơn đặt hàng chưa
+        int currentReceived = await _context.OrderDeviceItems.CountAsync(d => d.OrderItemID == item.OrderItemID);
+        if (currentReceived >= item.ExpectedQuantity)
+        {
+            throw new InvalidOperationException($"Loại thiết bị '{item.ModelName}' đã nhận đủ số lượng ({currentReceived}/{item.ExpectedQuantity} máy) theo đơn đặt hàng! Không thể thêm tiếp.");
+        }
+
         string serialNumber = dto.SerialNumber?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(serialNumber))
         {
@@ -399,6 +406,19 @@ public class OrderService : IOrderService
             .ToList();
 
         if (!cleanSerials.Any()) return result;
+
+        // Kiểm tra xem số lượng dán vào có vượt quá số lượng còn thiếu của dòng này không
+        int currentReceived = await _context.OrderDeviceItems.CountAsync(d => d.OrderItemID == item.OrderItemID);
+        int remainingQuantity = item.ExpectedQuantity - currentReceived;
+        if (remainingQuantity <= 0)
+        {
+            throw new InvalidOperationException($"Loại thiết bị '{item.ModelName}' đã nhận đủ số lượng ({currentReceived}/{item.ExpectedQuantity} máy) theo đơn đặt hàng! Không thể thêm tiếp.");
+        }
+
+        if (cleanSerials.Count > remainingQuantity)
+        {
+            throw new InvalidOperationException($"Loại thiết bị '{item.ModelName}' chỉ còn cần nhập thêm {remainingQuantity} máy (đã nhận {currentReceived}/{item.ExpectedQuantity}), nhưng danh sách bạn nhập có tới {cleanSerials.Count} máy!");
+        }
 
         // Kiểm tra xem có Serial nào đã có trong đơn hàng này chưa
         var existingInOrder = await _context.OrderDeviceItems
