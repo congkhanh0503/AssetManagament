@@ -11,6 +11,9 @@ public class CreateOrderDto
     [MaxLength(255)]
     public string OrderName { get; set; } = string.Empty;
 
+    [MaxLength(100)]
+    public string? PrCode { get; set; }
+
     public bool IsProjectBased { get; set; } = false;
 
     [MaxLength(255)]
@@ -62,6 +65,9 @@ public class UpdateOrderDto
     [Required]
     [MaxLength(255)]
     public string OrderName { get; set; } = string.Empty;
+
+    [MaxLength(100)]
+    public string? PrCode { get; set; }
 
     public bool IsProjectBased { get; set; } = false;
 
@@ -121,6 +127,7 @@ public class OrderSummaryDto
     public int OrderID { get; set; }
     public string OrderCode { get; set; } = string.Empty;
     public string OrderName { get; set; } = string.Empty;
+    public string? PrCode { get; set; }
     public bool IsProjectBased { get; set; }
     public string? ProjectName { get; set; }
     public int? SupplierID { get; set; }

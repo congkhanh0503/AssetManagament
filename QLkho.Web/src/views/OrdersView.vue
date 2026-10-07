@@ -182,7 +182,12 @@
               </td>
               <td>
                 <div class="order-title-cell">
-                  <strong class="order-name-text">{{ order.orderName }}</strong>
+                  <div class="order-name-row">
+                    <strong class="order-name-text">{{ order.orderName }}</strong>
+                    <span v-if="order.prCode" class="pr-badge" :title="'Mã PR: ' + order.prCode">
+                      PR: {{ order.prCode }}
+                    </span>
+                  </div>
                   <div class="order-sub-meta">
                     <span v-if="order.supplierName" class="sup-tag">🏢 {{ order.supplierName }}</span>
                     <span class="type-tag">📦 {{ order.itemTypesCount }} loại thiết bị</span>
@@ -293,10 +298,22 @@
                 class="form-control" 
                 v-model="createForm.orderName" 
                 required 
-                placeholder="VD: Đơn mua 50 Laptop HP EliteBook và màn hình Dell" 
+                placeholder="VD: Đơn mua 50 Laptop HP EliteBook..." 
               />
             </div>
 
+            <div class="form-group">
+              <label class="form-label">Mã PR (PR CODE) <span class="badge-optional">Tùy chọn</span></label>
+              <input 
+                type="text" 
+                class="form-control" 
+                v-model="createForm.prCode" 
+                placeholder="VD: PR-2026-001 (để trống nếu không có)" 
+              />
+            </div>
+          </div>
+
+          <div class="form-grid-2">
             <div class="form-group">
               <label class="form-label">Mã đơn hàng (PO Code)</label>
               <input 
@@ -305,6 +322,16 @@
                 v-model="createForm.orderCode" 
                 placeholder="Tự động sinh (VD: PO-20261006-001)" 
               />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Nhà cung cấp</label>
+              <select class="form-control" v-model="createForm.supplierID" @change="onSupplierChange">
+                <option :value="null">-- Chọn nhà cung cấp (nếu có) --</option>
+                <option v-for="sup in suppliersList" :key="sup.supplierID" :value="sup.supplierID">
+                  {{ sup.supplierName }}
+                </option>
+              </select>
             </div>
           </div>
 
@@ -326,26 +353,14 @@
             </div>
           </div>
 
-          <div class="form-grid-2">
-            <div class="form-group">
-              <label class="form-label">Nhà cung cấp</label>
-              <select class="form-control" v-model="createForm.supplierID" @change="onSupplierChange">
-                <option :value="null">-- Chọn nhà cung cấp (nếu có) --</option>
-                <option v-for="sup in suppliersList" :key="sup.supplierID" :value="sup.supplierID">
-                  {{ sup.supplierName }}
-                </option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Ghi chú đơn hàng</label>
-              <input 
-                type="text" 
-                class="form-control" 
-                v-model="createForm.note" 
-                placeholder="Ghi chú về tiến độ giao hàng, người phụ trách..." 
-              />
-            </div>
+          <div class="form-group" style="margin-top: 10px;">
+            <label class="form-label">Ghi chú đơn hàng</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              v-model="createForm.note" 
+              placeholder="Ghi chú về tiến độ giao hàng, người phụ trách..." 
+            />
           </div>
 
           <!-- DANH SÁCH LOẠI THIẾT BỊ TRONG ĐƠN -->
@@ -459,6 +474,9 @@
               <div class="title-code-row">
                 <span class="code-badge order-badge">{{ currentOrder.orderCode }}</span>
                 <h2 class="modal-title">{{ currentOrder.orderName }}</h2>
+                <span v-if="currentOrder.prCode" class="pr-badge-large" title="Mã PR (Purchase Request)">
+                  PR: {{ currentOrder.prCode }}
+                </span>
                 <span :class="getStatusBadgeClass(currentOrder.status)">
                   {{ getStatusText(currentOrder.status) }}
                 </span>
@@ -777,6 +795,7 @@ const isCreateModalOpen = ref(false)
 const submitting = ref(false)
 const createForm = reactive({
   orderName: '',
+  prCode: '',
   orderCode: '',
   isProjectBased: false,
   projectName: '',
@@ -837,6 +856,7 @@ const filteredOrders = computed(() => {
     list = list.filter(o => 
       (o.orderCode || '').toLowerCase().includes(k) ||
       (o.orderName || '').toLowerCase().includes(k) ||
+      (o.prCode || '').toLowerCase().includes(k) ||
       (o.projectName || '').toLowerCase().includes(k) ||
       (o.supplierName || '').toLowerCase().includes(k)
     )
@@ -881,6 +901,7 @@ const fetchMeta = async () => {
 const openCreateModal = () => {
   // Reset form
   createForm.orderName = ''
+  createForm.prCode = ''
   createForm.orderCode = ''
   createForm.isProjectBased = false
   createForm.projectName = ''
@@ -934,6 +955,7 @@ const submitCreateOrder = async () => {
   try {
     const payload = {
       orderName: createForm.orderName.trim(),
+      prCode: createForm.prCode?.trim() || undefined,
       orderCode: createForm.orderCode.trim() || undefined,
       isProjectBased: createForm.isProjectBased,
       projectName: createForm.isProjectBased ? createForm.projectName.trim() : undefined,
@@ -1539,9 +1561,53 @@ onMounted(() => {
   gap: 4px;
 }
 
+.order-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .order-name-text {
   font-size: 0.9rem;
   color: #1e293b;
+}
+
+.pr-badge {
+  font-family: monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #7c3aed;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  padding: 2px 7px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 0 1px 2px rgba(124, 58, 237, 0.08);
+}
+
+.pr-badge-large {
+  font-family: monospace;
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: #6d28d9;
+  background: #ede9fe;
+  border: 1px solid #c4b5fd;
+  padding: 3px 10px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.badge-optional {
+  font-size: 0.725rem;
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
 }
 
 .order-sub-meta {

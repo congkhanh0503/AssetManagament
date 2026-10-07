@@ -16,6 +16,9 @@ public class Order
     [MaxLength(255)]
     public string OrderName { get; set; } = string.Empty;
 
+    [MaxLength(100)]
+    public string? PrCode { get; set; }
+
     public bool IsProjectBased { get; set; } = false;
 
     [MaxLength(255)]

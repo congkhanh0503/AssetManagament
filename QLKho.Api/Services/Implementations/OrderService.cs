@@ -36,6 +36,7 @@ public class OrderService : IOrderService
             query = query.Where(o =>
                 o.OrderCode.ToLower().Contains(k) ||
                 o.OrderName.ToLower().Contains(k) ||
+                (o.PrCode != null && o.PrCode.ToLower().Contains(k)) ||
                 (o.ProjectName != null && o.ProjectName.ToLower().Contains(k)) ||
                 (o.SupplierName != null && o.SupplierName.ToLower().Contains(k))
             );
@@ -86,6 +87,7 @@ public class OrderService : IOrderService
             OrderID = order.OrderID,
             OrderCode = order.OrderCode,
             OrderName = order.OrderName,
+            PrCode = order.PrCode,
             IsProjectBased = order.IsProjectBased,
             ProjectName = order.ProjectName,
             SupplierID = order.SupplierID,
@@ -183,6 +185,7 @@ public class OrderService : IOrderService
         {
             OrderCode = code,
             OrderName = dto.OrderName.Trim(),
+            PrCode = dto.PrCode?.Trim(),
             IsProjectBased = dto.IsProjectBased,
             ProjectName = dto.IsProjectBased ? dto.ProjectName?.Trim() : null,
             SupplierID = dto.SupplierID,
@@ -238,6 +241,7 @@ public class OrderService : IOrderService
         if (order == null) return null;
 
         order.OrderName = dto.OrderName.Trim();
+        order.PrCode = dto.PrCode?.Trim();
         order.IsProjectBased = dto.IsProjectBased;
         order.ProjectName = dto.IsProjectBased ? dto.ProjectName?.Trim() : null;
         order.SupplierID = dto.SupplierID;
@@ -680,6 +684,7 @@ public class OrderService : IOrderService
             OrderID = order.OrderID,
             OrderCode = order.OrderCode,
             OrderName = order.OrderName,
+            PrCode = order.PrCode,
             IsProjectBased = order.IsProjectBased,
             ProjectName = order.ProjectName,
             SupplierID = order.SupplierID,
