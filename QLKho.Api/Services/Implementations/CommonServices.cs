@@ -31,7 +31,25 @@ public class DepartmentService : IDepartmentService
                 .Select(g => new { DeptID = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.DeptID, x => x.Count);
         }
-        catch (Exception) {}
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DepartmentService GetAllAsync empCounts Error]: {ex.Message}");
+        }
+
+        var assetCounts = new Dictionary<int, int>();
+        try
+        {
+            assetCounts = await _context.Assets
+                .AsNoTracking()
+                .Where(a => a.CurrentHolderID != null && a.CurrentHolder != null)
+                .GroupBy(a => a.CurrentHolder!.DepartmentID)
+                .Select(g => new { DeptID = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.DeptID, x => x.Count);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DepartmentService GetAllAsync assetCounts Error]: {ex.Message}");
+        }
 
         return list.Select(d => new DepartmentDto
         {
@@ -39,8 +57,10 @@ public class DepartmentService : IDepartmentService
             DepartmentName = d.DepartmentName,
             DepartmentCode = d.DepartmentCode,
             ManagerName = d.ManagerName,
+            SubManagers = SplitSubManagers(d.SubManagers),
             Description = d.Description,
-            EmployeeCount = empCounts.TryGetValue(d.DepartmentID, out var count) ? count : 0
+            EmployeeCount = empCounts.TryGetValue(d.DepartmentID, out var count) ? count : 0,
+            AssignedAssetCount = assetCounts.TryGetValue(d.DepartmentID, out var aCount) ? aCount : 0
         }).ToList();
     }
 
@@ -59,14 +79,28 @@ public class DepartmentService : IDepartmentService
         }
         catch (Exception) {}
 
+        int assetCount = 0;
+        try
+        {
+            assetCount = await _context.Assets
+                .AsNoTracking()
+                .CountAsync(a => a.CurrentHolderID != null && a.CurrentHolder != null && a.CurrentHolder.DepartmentID == id);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DepartmentService GetByIdAsync assetCount Error]: {ex.Message}");
+        }
+
         return new DepartmentDto
         {
             DepartmentID = d.DepartmentID,
             DepartmentName = d.DepartmentName,
             DepartmentCode = d.DepartmentCode,
             ManagerName = d.ManagerName,
+            SubManagers = SplitSubManagers(d.SubManagers),
             Description = d.Description,
-            EmployeeCount = empCount
+            EmployeeCount = empCount,
+            AssignedAssetCount = assetCount
         };
     }
 
@@ -101,6 +135,7 @@ public class DepartmentService : IDepartmentService
             DepartmentName = dto.DepartmentName.Trim(),
             DepartmentCode = finalCode,
             ManagerName = dto.ManagerName?.Trim(),
+            SubManagers = JoinSubManagers(dto.SubManagers, dto.ManagerName),
             Description = dto.Description?.Trim(),
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
@@ -113,6 +148,22 @@ public class DepartmentService : IDepartmentService
         return (await GetByIdAsync(dept.DepartmentID))!;
     }
 
+    private static List<string> SplitSubManagers(string? raw) =>
+        string.IsNullOrWhiteSpace(raw)
+            ? new List<string>()
+            : raw.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
+    // Bỏ trùng và loại manager chính khỏi danh sách manager nhỏ
+    private static string? JoinSubManagers(IEnumerable<string>? subs, string? mainManager)
+    {
+        var list = (subs ?? Enumerable.Empty<string>())
+            .Select(s => s?.Replace(";", " ").Trim() ?? string.Empty)
+            .Where(s => s.Length > 0 && !string.Equals(s, mainManager?.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return list.Count == 0 ? null : string.Join(";", list);
+    }
+
     public async Task<DepartmentDto> UpdateAsync(int id, UpdateDepartmentDto dto)
     {
         var dept = await _context.Departments.FindAsync(id);
@@ -120,8 +171,22 @@ public class DepartmentService : IDepartmentService
 
         dept.DepartmentName = dto.DepartmentName.Trim();
         dept.DepartmentCode = dto.DepartmentCode?.Trim();
-        dept.ManagerName = dto.ManagerName?.Trim();
+        var newManager = string.IsNullOrWhiteSpace(dto.ManagerName) ? null : dto.ManagerName.Trim();
+        var managerChanged = dept.ManagerName != newManager;
+        dept.ManagerName = newManager;
+        dept.SubManagers = JoinSubManagers(dto.SubManagers, newManager);
         dept.Description = dto.Description?.Trim();
+
+        // Đổi trưởng bộ phận -> cập nhật manager cho toàn bộ nhân sự của phòng ban
+        if (managerChanged)
+        {
+            var staff = await _context.Employees.Where(e => e.DepartmentID == id).ToListAsync();
+            foreach (var e in staff)
+            {
+                e.ManagerName = newManager;
+                e.UpdatedAt = DateTime.UtcNow;
+            }
+        }
 
         await _context.SaveChangesAsync();
         return (await GetByIdAsync(dept.DepartmentID))!;

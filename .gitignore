@@ -1,6 +1,7 @@
 # .NET Build artifacts
 [Bb]in/
 [Oo]bj/
+QLKho.Api/appsettings.Local.json
 
 # Visual Studio & IDEs
 .vs/

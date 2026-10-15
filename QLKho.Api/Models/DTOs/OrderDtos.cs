@@ -7,17 +7,18 @@ public class CreateOrderDto
     [MaxLength(50)]
     public string? OrderCode { get; set; }
 
-    [Required(ErrorMessage = "Tên đơn hàng không được để trống")]
-    [MaxLength(255)]
-    public string OrderName { get; set; } = string.Empty;
-
     [MaxLength(100)]
     public string? PrCode { get; set; }
-
+ 
+    [MaxLength(255)]
+    public string? OrderName { get; set; }
+ 
     public bool IsProjectBased { get; set; } = false;
 
     [MaxLength(255)]
     public string? ProjectName { get; set; }
+
+    public int? DepartmentID { get; set; }
 
     public int? SupplierID { get; set; }
 
@@ -62,17 +63,18 @@ public class CreateOrderItemDto
 
 public class UpdateOrderDto
 {
-    [Required]
-    [MaxLength(255)]
-    public string OrderName { get; set; } = string.Empty;
-
     [MaxLength(100)]
     public string? PrCode { get; set; }
+
+    [MaxLength(255)]
+    public string? OrderName { get; set; }
 
     public bool IsProjectBased { get; set; } = false;
 
     [MaxLength(255)]
     public string? ProjectName { get; set; }
+
+    public int? DepartmentID { get; set; }
 
     public int? SupplierID { get; set; }
 
@@ -109,6 +111,17 @@ public class AddDeviceToOrderDto
     public string? WarehouseLocation { get; set; }
 }
 
+public class AddQuantityDevicesToOrderDto
+{
+    [Required]
+    public int OrderItemID { get; set; }
+
+    [Range(1, 10000)]
+    public int Quantity { get; set; }
+
+    public string? WarehouseLocation { get; set; }
+}
+
 public class BulkAddDevicesToOrderDto
 {
     [Required]
@@ -126,10 +139,12 @@ public class OrderSummaryDto
 {
     public int OrderID { get; set; }
     public string OrderCode { get; set; } = string.Empty;
-    public string OrderName { get; set; } = string.Empty;
     public string? PrCode { get; set; }
+    public string? OrderName { get; set; }
     public bool IsProjectBased { get; set; }
     public string? ProjectName { get; set; }
+    public int? DepartmentID { get; set; }
+    public string? DepartmentName { get; set; }
     public int? SupplierID { get; set; }
     public string? SupplierName { get; set; }
     public DateTime OrderDate { get; set; }

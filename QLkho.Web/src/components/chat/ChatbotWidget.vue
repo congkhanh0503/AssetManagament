@@ -181,6 +181,8 @@ const inputMessage = ref('')
 const inputRef = ref(null)
 const messagesContainer = ref(null)
 const warehouseContext = ref(null)
+let contextLoadedAt = 0
+const CONTEXT_TTL_MS = 60 * 1000
 
 const quickPrompts = [
   { icon: '📊', label: 'Tổng quan kho', query: 'Tổng quan tình trạng kho tài sản hiện tại thế nào?' },
@@ -207,6 +209,7 @@ async function loadContext() {
   isSyncing.value = true
   try {
     warehouseContext.value = await getLiveWarehouseContext()
+    contextLoadedAt = Date.now()
   } finally {
     isSyncing.value = false
   }
@@ -252,8 +255,10 @@ async function handleSendMessage() {
   scrollToBottom()
 
   // Đảm bảo context được nạp
-  if (!warehouseContext.value) {
-    warehouseContext.value = await getLiveWarehouseContext()
+  // Nạp lại dữ liệu nếu chưa có hoặc đã cũ hơn 1 phút (để thấy cấp phát/thu hồi mới)
+  if (!warehouseContext.value || Date.now() - contextLoadedAt > CONTEXT_TTL_MS) {
+    warehouseContext.value = (await getLiveWarehouseContext()) || warehouseContext.value
+    contextLoadedAt = Date.now()
   }
 
   try {

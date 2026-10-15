@@ -17,8 +17,11 @@ public class CreateEmployeeDto
     public int? DepartmentID { get; set; }
 
     public string? Title { get; set; }
+    public string? ManagerName { get; set; }
+    public DateTime? CreatedAt { get; set; }
     public string? Email { get; set; }
     public string? Phone { get; set; }
+    public string? AccountName { get; set; }
     public DateTime JoinDate { get; set; } = DateTime.UtcNow;
     public DateTime? LeaveDate { get; set; }
 
@@ -26,6 +29,9 @@ public class CreateEmployeeDto
     public string OA_Status { get; set; } = "Disable";
     public string Email_Status { get; set; } = "Disable";
     public string AD_Status { get; set; } = "Disable";
+    public string Mfa_Status { get; set; } = "Disable";
+    public string EvMailbox_Status { get; set; } = "Disable";
+    public string Migrate_Status { get; set; } = "Disable";
 
     public string Status { get; set; } = "Active";
 }
@@ -45,8 +51,11 @@ public class UpdateEmployeeDto
     public int? DepartmentID { get; set; }
 
     public string? Title { get; set; }
+    public string? ManagerName { get; set; }
+    public DateTime? CreatedAt { get; set; }
     public string? Email { get; set; }
     public string? Phone { get; set; }
+    public string? AccountName { get; set; }
     public DateTime JoinDate { get; set; } = DateTime.UtcNow;
     public DateTime? LeaveDate { get; set; }
 
@@ -54,6 +63,9 @@ public class UpdateEmployeeDto
     public string? OA_Status { get; set; }
     public string? Email_Status { get; set; }
     public string? AD_Status { get; set; }
+    public string? Mfa_Status { get; set; }
+    public string? EvMailbox_Status { get; set; }
+    public string? Migrate_Status { get; set; }
 
     public string Status { get; set; } = "Active";
 }
@@ -71,6 +83,11 @@ public class UpdateAccountStatusDto
 
     [Required]
     public string AD_Status { get; set; } = "Disable";
+
+    // Không gửi (null) = giữ nguyên trạng thái hiện tại
+    public string? Mfa_Status { get; set; }
+    public string? EvMailbox_Status { get; set; }
+    public string? Migrate_Status { get; set; }
 }
 
 public class EmployeeFilterDto
@@ -94,8 +111,11 @@ public class EmployeeItemDto
     public string DepartmentName { get; set; } = string.Empty;
     public string? DepartmentCode { get; set; }
     public string? Title { get; set; }
+    public string? ManagerName { get; set; }
+    public DateTime CreatedAt { get; set; }
     public string? Email { get; set; }
     public string? Phone { get; set; }
+    public string? AccountName { get; set; }
     public DateTime JoinDate { get; set; }
     public DateTime? LeaveDate { get; set; }
 
@@ -103,6 +123,9 @@ public class EmployeeItemDto
     public string OA_Status { get; set; } = "Disable";
     public string Email_Status { get; set; } = "Disable";
     public string AD_Status { get; set; } = "Disable";
+    public string Mfa_Status { get; set; } = "Disable";
+    public string EvMailbox_Status { get; set; } = "Disable";
+    public string Migrate_Status { get; set; } = "Disable";
 
     public string Status { get; set; } = "Active";
     public bool IsOnboarding { get; set; }
@@ -135,6 +158,9 @@ public class LeaveAlertItemDto
     public string OA_Status { get; set; } = string.Empty;
     public string Email_Status { get; set; } = string.Empty;
     public string AD_Status { get; set; } = string.Empty;
+    public string Mfa_Status { get; set; } = string.Empty;
+    public string EvMailbox_Status { get; set; } = string.Empty;
+    public string Migrate_Status { get; set; } = string.Empty;
     public int HoldingAssetCount { get; set; }
     public List<string> HoldingAssetNames { get; set; } = new();
 }
@@ -180,6 +206,9 @@ public class ImportEmployeeItemDto
     public string? OA_Status { get; set; } = "Disable";
     public string? Email_Status { get; set; } = "Disable";
     public string? AD_Status { get; set; } = "Disable";
+    public string? Mfa_Status { get; set; } = "Disable";
+    public string? EvMailbox_Status { get; set; } = "Disable";
+    public string? Migrate_Status { get; set; } = "Disable";
     public string? Status { get; set; } = "Active";
 }
 

@@ -19,7 +19,7 @@
           <div class="user-meta">
             <div class="user-name">{{ currentUser.fullName || 'Admin' }}</div>
             <div class="user-role" :class="{ 'hr-role-badge': currentUser.role === 'HR' }">
-              {{ currentUser.role === 'HR' ? $t('auth.role_hr') : $t('auth.role_admin') }}
+              {{ currentUser.role === 'HR' ? $t('auth.role_hr') : currentUser.role === 'Viewer' ? $t('auth.role_viewer') : $t('auth.role_admin') }}
             </div>
           </div>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chevron-icon">

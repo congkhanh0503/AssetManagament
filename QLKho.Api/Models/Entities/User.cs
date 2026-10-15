@@ -21,7 +21,7 @@ public class User
     public string FullName { get; set; } = string.Empty;
 
     [MaxLength(50)]
-    public string Role { get; set; } = "Admin"; // Admin, Manager, Staff
+    public string Role { get; set; } = "Admin"; // Admin, HR, Viewer
 
     [MaxLength(255)]
     public string? Avatar { get; set; }

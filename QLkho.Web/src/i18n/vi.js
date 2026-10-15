@@ -63,7 +63,8 @@ export default {
     invalid_credentials: 'Tên đăng nhập hoặc mật khẩu không chính xác',
     role_admin: 'Quản trị viên',
     role_it: 'Chuyên viên IT',
-    role_hr: 'Chuyên viên Nhân sự'
+    role_hr: 'Chuyên viên Nhân sự',
+    role_viewer: 'Chỉ xem tài sản'
   },
   sidebar: {
     section_overview: 'Tổng quan & Nghiệp vụ',
@@ -72,10 +73,12 @@ export default {
     orders: 'Quản lý Đơn hàng & Nhập kho',
     documents: 'Lưu Trữ Hồ Sơ / PDF',
     section_management: 'Danh mục Quản trị',
-    employees: 'Nhân sự & Tài khoản',
+    employees: 'Quản lý Nhân sự',
+    accounts: 'Quản lý Tài khoản',
     departments: 'Bộ phận & Phòng ban',
     categories_suppliers: 'Loại Thiết Bị & NCC',
     hr_section_title: 'Phân hệ Nghiệp vụ Nhân sự',
+    viewer_restricted_notice: 'Tài khoản này chỉ được xem tất cả các tab, không có quyền thêm, sửa, xóa hay cấp phát.',
     hr_restricted_notice: 'Tài khoản nhân sự chỉ có quyền truy cập và xử lý hồ sơ nhân viên, ngày làm việc và trạng thái tài khoản hệ thống.',
     backend_status: 'Backend API (ASP.NET Core)',
     db_connected: 'MS SQL Server Connected'
@@ -228,6 +231,9 @@ export default {
     action_delete: 'Xóa Thiết Bị'
   },
   employees: {
+    table_created_date: 'Ngày tạo',
+    table_manager: 'Trưởng bộ phận (Manager)',
+    manager_hint: 'Chọn manager chính hoặc manager nhỏ của phòng ban chịu trách nhiệm về nhân sự này.',
     title: 'Quản Lý Nhân Sự & 4 Tài Khoản Hệ Thống',
     subtitle: 'Theo dõi nhân sự, cấp máy, ngày làm việc và đồng bộ 4 tài khoản hệ thống (QAD, OA, Email, AD)',
     tab_active: 'Đang Làm Việc',
@@ -313,6 +319,13 @@ export default {
     btn_download: 'Tải Về'
   },
   departments: {
+    tab_departments: 'Phòng ban',
+    tab_managers: 'Manager',
+    manager_pick_employee: '-- Chọn nhân sự có chức vụ manager --',
+    manager_add: 'Thêm Manager',
+    manager_empty: 'Chưa có manager nào. Chọn nhân sự ở trên để thêm.',
+    manager_col_name: 'Họ tên',
+    sub_managers: 'Manager nhỏ',
     title: 'Quản Lý Bộ Phận & Phòng Ban',
     subtitle: 'Danh mục các phòng ban và cơ cấu tổ chức trong doanh nghiệp',
     btn_add: 'Thêm Phòng Ban Mới',

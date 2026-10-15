@@ -36,9 +36,12 @@
         <label class="form-label">Chọn Nhân Viên Nhận Bàn Giao *</label>
         <EmployeeSelector 
           v-model="form.toEmployeeID" 
-          :employees="employees" 
+          :employees="allowedEmployees" 
           :departments="departments" 
         />
+        <small v-if="restrictedDepartmentName" class="text-dim" style="font-size: 0.75rem; margin-top: 4px; display: block; color: #b45309;">
+          🔒 Thiết bị thuộc đơn hàng do bộ phận <strong>{{ restrictedDepartmentName }}</strong> đặt, chỉ cấp phát cho nhân sự bộ phận này.
+        </small>
       </div>
 
       <!-- 1. Chọn Chuột Kèm Theo Trong Kho (Khi cấp phát Laptop) -->
@@ -173,6 +176,18 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'submit'])
+
+// Thiết bị thuộc đơn hàng do bộ phận khác đặt -> chỉ cấp cho nhân sự bộ phận đó
+const allowedEmployees = computed(() => {
+  const deptId = props.asset?.orderDepartmentID
+  return deptId ? props.employees.filter(e => e.departmentID === deptId) : props.employees
+})
+
+const restrictedDepartmentName = computed(() => {
+  const deptId = props.asset?.orderDepartmentID
+  if (!deptId) return ''
+  return props.departments.find(d => d.departmentID === deptId)?.departmentName || `#${deptId}`
+})
 
 const form = reactive({
   toEmployeeID: null,

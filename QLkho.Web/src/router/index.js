@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import DashboardView from '../views/DashboardView.vue'
 import AssetsView from '../views/AssetsView.vue'
 import EmployeesView from '../views/EmployeesView.vue'
+import AccountsView from '../views/AccountsView.vue'
 import DepartmentsView from '../views/DepartmentsView.vue'
 import CategoriesSuppliersView from '../views/CategoriesSuppliersView.vue'
 import DocumentsView from '../views/DocumentsView.vue'
@@ -22,43 +23,49 @@ const router = createRouter({
       path: '/',
       name: 'dashboard',
       component: DashboardView,
-      meta: { requiresAuth: true, roles: ['Admin'] },
+      meta: { requiresAuth: true, roles: ['Admin', 'Viewer'] },
     },
     {
       path: '/assets',
       name: 'assets',
       component: AssetsView,
-      meta: { requiresAuth: true, roles: ['Admin'] },
+      meta: { requiresAuth: true, roles: ['Admin', 'Viewer'] },
     },
     {
       path: '/orders',
       name: 'orders',
       component: OrdersView,
-      meta: { requiresAuth: true, roles: ['Admin'] },
+      meta: { requiresAuth: true, roles: ['Admin', 'Viewer'] },
     },
     {
       path: '/employees',
       name: 'employees',
       component: EmployeesView,
-      meta: { requiresAuth: true, roles: ['Admin', 'HR'] },
+      meta: { requiresAuth: true, roles: ['Admin', 'HR', 'Viewer'] },
+    },
+    {
+      path: '/accounts',
+      name: 'accounts',
+      component: AccountsView,
+      meta: { requiresAuth: true, roles: ['Admin', 'Viewer'] },
     },
     {
       path: '/documents',
       name: 'documents',
       component: DocumentsView,
-      meta: { requiresAuth: true, roles: ['Admin'] },
+      meta: { requiresAuth: true, roles: ['Admin', 'Viewer'] },
     },
     {
       path: '/departments',
       name: 'departments',
       component: DepartmentsView,
-      meta: { requiresAuth: true, roles: ['Admin'] },
+      meta: { requiresAuth: true, roles: ['Admin', 'Viewer'] },
     },
     {
       path: '/categories-suppliers',
       name: 'categories-suppliers',
       component: CategoriesSuppliersView,
-      meta: { requiresAuth: true, roles: ['Admin'] },
+      meta: { requiresAuth: true, roles: ['Admin', 'Viewer'] },
     },
     {
       path: '/:pathMatch(.*)*',

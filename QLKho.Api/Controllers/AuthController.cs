@@ -58,7 +58,9 @@ public class AuthController : ControllerBase
 
             return Ok(new LoginResponseDto
             {
-                Token = $"token_{user.UserID}_{Guid.NewGuid():N}",
+                Token = user.Role == "Viewer"
+                    ? $"token_viewer_{Guid.NewGuid():N}"
+                    : $"token_{user.UserID}_{Guid.NewGuid():N}",
                 UserID = user.UserID,
                 Username = user.Username,
                 FullName = user.FullName,
@@ -94,6 +96,20 @@ public class AuthController : ControllerBase
                 Role = "HR",
                 Avatar = "",
                 Email = "hr@qlkho.local"
+            });
+        }
+
+        if (username == "viewer" && password == "123456")
+        {
+            return Ok(new LoginResponseDto
+            {
+                Token = $"token_viewer_{Guid.NewGuid():N}",
+                UserID = 3,
+                Username = "viewer",
+                FullName = "Tài Khoản Xem Tài Sản (Viewer)",
+                Role = "Viewer",
+                Avatar = "",
+                Email = "viewer@qlkho.local"
             });
         }
 

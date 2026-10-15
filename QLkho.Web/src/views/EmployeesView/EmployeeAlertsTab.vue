@@ -146,7 +146,8 @@ const hasActiveAccounts = (emp) => {
   const email = emp.email_Status
   const ad = emp.ad_Status || emp.aD_Status
 
-  return isAccountActive(qad) || isAccountActive(oa) || isAccountActive(email) || isAccountActive(ad)
+  return isAccountActive(qad) || isAccountActive(oa) || isAccountActive(email) || isAccountActive(ad) ||
+    isAccountActive(emp.mfa_Status) || isAccountActive(emp.evMailbox_Status) || isAccountActive(emp.migrate_Status)
 }
 
 const countActiveAccounts = (emp) => {
@@ -160,6 +161,9 @@ const countActiveAccounts = (emp) => {
   if (isAccountActive(oa)) count++
   if (isAccountActive(email)) count++
   if (isAccountActive(ad)) count++
+  if (isAccountActive(emp.mfa_Status)) count++
+  if (isAccountActive(emp.evMailbox_Status)) count++
+  if (isAccountActive(emp.migrate_Status)) count++
   return count
 }
 

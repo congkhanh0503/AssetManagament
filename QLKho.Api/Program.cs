@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -8,6 +9,7 @@ using QLKho.Api.Data;
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 
 // Cố định cổng Backend API là http://0.0.0.0:5000 (cho phép truy cập cả từ localhost và Docker Network)
 builder.WebHost.UseUrls("http://0.0.0.0:5000");
@@ -28,6 +30,30 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
+
+builder.Services.AddHttpClient();
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("Gemini", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, _) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            message = "Bạn gửi yêu cầu quá nhanh. Vui lòng thử lại sau một phút."
+        });
+    };
+});
 
 // 3. Cấu hình CORS mở rộng
 builder.Services.AddCors(options =>
@@ -285,6 +311,15 @@ using (var scope = app.Services.CreateScope())
                 created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
+            -- 15. Bảng Manager (người có chức vụ manager, chọn làm trưởng bộ phận)
+            CREATE TABLE IF NOT EXISTS department_managers (
+                manager_id SERIAL PRIMARY KEY,
+                employee_id INT,
+                full_name VARCHAR(255) NOT NULL,
+                email VARCHAR(255),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
             -- =========================================================================
             -- TỰ ĐỘNG BỔ SUNG CỘT CHO TẤT CẢ CÁC BẢNG (ĐỀ PHÒNG DATABASE CŨ BỊ THIẾU CỘT)
             -- =========================================================================
@@ -292,6 +327,8 @@ using (var scope = app.Services.CreateScope())
             ALTER TABLE departments ADD COLUMN IF NOT EXISTS department_name VARCHAR(255) DEFAULT '';
             ALTER TABLE departments ADD COLUMN IF NOT EXISTS manager_name VARCHAR(255);
             ALTER TABLE departments ADD COLUMN IF NOT EXISTS manager_id INT;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS department_id INT;
+            ALTER TABLE departments ADD COLUMN IF NOT EXISTS sub_managers VARCHAR(1000);
             ALTER TABLE departments ADD COLUMN IF NOT EXISTS description VARCHAR(500);
             ALTER TABLE departments ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
             ALTER TABLE departments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
@@ -302,6 +339,11 @@ using (var scope = app.Services.CreateScope())
             ALTER TABLE employees ADD COLUMN IF NOT EXISTS english_name VARCHAR(255);
             ALTER TABLE employees ADD COLUMN IF NOT EXISTS department_id INT;
             ALTER TABLE employees ADD COLUMN IF NOT EXISTS title VARCHAR(150);
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS mfa_status VARCHAR(20) DEFAULT 'Disable';
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS ev_mailbox_status VARCHAR(20) DEFAULT 'Disable';
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS migrate_status VARCHAR(20) DEFAULT 'Disable';
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS manager_name VARCHAR(255);
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS account_name VARCHAR(100);
             ALTER TABLE employees ADD COLUMN IF NOT EXISTS email VARCHAR(255);
             ALTER TABLE employees ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
             ALTER TABLE employees ADD COLUMN IF NOT EXISTS join_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
@@ -400,6 +442,7 @@ using (var scope = app.Services.CreateScope())
             ALTER TABLE documents ADD COLUMN IF NOT EXISTS asset_id INT;
             ALTER TABLE documents ADD COLUMN IF NOT EXISTS employee_id INT;
             ALTER TABLE documents ADD COLUMN IF NOT EXISTS department_id INT;
+            ALTER TABLE documents ADD COLUMN IF NOT EXISTS order_id INT;
             ALTER TABLE documents ADD COLUMN IF NOT EXISTS uploaded_by VARCHAR(100) DEFAULT 'Admin';
             ALTER TABLE documents ADD COLUMN IF NOT EXISTS description VARCHAR(500);
             ALTER TABLE documents ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
@@ -413,6 +456,77 @@ using (var scope = app.Services.CreateScope())
             ALTER TABLE employee_histories ADD COLUMN IF NOT EXISTS new_value VARCHAR(500);
             ALTER TABLE employee_histories ADD COLUMN IF NOT EXISTS performed_by VARCHAR(100) DEFAULT 'Hệ Thống';
             ALTER TABLE employee_histories ADD COLUMN IF NOT EXISTS action_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+
+            -- Tự động đồng bộ lịch sử bàn giao sang EmployeeHistories nếu chưa có
+            INSERT INTO employee_histories (employee_id, action_type, title, description, old_value, new_value, performed_by, action_date)
+            SELECT 
+                h.to_employee_id,
+                'AssetAssigned',
+                'Cấp phát thiết bị ' || a.asset_code,
+                'Được cấp phát thiết bị ' || a.asset_name || ' (' || a.asset_code || ') - S/N: ' || COALESCE(a.serial_number, '---') || ' | Tình trạng: ' || COALESCE(h.condition_status, 'Hoạt động tốt'),
+                COALESCE(h.from_location, 'Kho IT'),
+                a.asset_code || ' (' || a.asset_name || ')',
+                COALESCE(h.created_by, 'Admin'),
+                h.action_date
+            FROM asset_handover_histories h
+            JOIN assets a ON h.asset_id = a.asset_id
+            WHERE h.action_type = 'Assign' 
+              AND h.to_employee_id IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM employee_histories eh 
+                  WHERE eh.employee_id = h.to_employee_id 
+                    AND eh.action_type = 'AssetAssigned' 
+                    AND eh.title = 'Cấp phát thiết bị ' || a.asset_code
+                    AND eh.action_date = h.action_date
+              );
+
+            INSERT INTO employee_histories (employee_id, action_type, title, description, old_value, new_value, performed_by, action_date)
+            SELECT 
+                h.to_employee_id,
+                'AssetTransferred',
+                'Tiếp nhận điều chuyển ' || a.asset_code,
+                'Tiếp nhận thiết bị ' || a.asset_name || ' (' || a.asset_code || ') từ ' || COALESCE(fe.full_name || ' (' || fe.employee_code || ')', 'người dùng cũ') || '. Tình trạng: ' || COALESCE(h.condition_status, 'Hoạt động bình thường'),
+                COALESCE(fe.full_name || ' (' || fe.employee_code || ')', 'Chưa có chủ'),
+                te.full_name || ' (' || te.employee_code || ')',
+                COALESCE(h.created_by, 'Admin'),
+                h.action_date
+            FROM asset_handover_histories h
+            JOIN assets a ON h.asset_id = a.asset_id
+            JOIN employees te ON h.to_employee_id = te.employee_id
+            LEFT JOIN employees fe ON h.from_employee_id = fe.employee_id
+            WHERE h.action_type = 'Transfer' 
+              AND h.to_employee_id IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM employee_histories eh 
+                  WHERE eh.employee_id = h.to_employee_id 
+                    AND eh.action_type = 'AssetTransferred' 
+                    AND eh.title = 'Tiếp nhận điều chuyển ' || a.asset_code
+                    AND eh.action_date = h.action_date
+              );
+
+            INSERT INTO employee_histories (employee_id, action_type, title, description, old_value, new_value, performed_by, action_date)
+            SELECT 
+                h.from_employee_id,
+                'AssetTransferred',
+                'Bàn giao điều chuyển ' || a.asset_code,
+                'Bàn giao thiết bị ' || a.asset_name || ' (' || a.asset_code || ') sang cho ' || te.full_name || ' (' || te.employee_code || ')',
+                fe.full_name || ' (' || fe.employee_code || ')',
+                te.full_name || ' (' || te.employee_code || ')',
+                COALESCE(h.created_by, 'Admin'),
+                h.action_date
+            FROM asset_handover_histories h
+            JOIN assets a ON h.asset_id = a.asset_id
+            JOIN employees fe ON h.from_employee_id = fe.employee_id
+            JOIN employees te ON h.to_employee_id = te.employee_id
+            WHERE h.action_type = 'Transfer' 
+              AND h.from_employee_id IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM employee_histories eh 
+                  WHERE eh.employee_id = h.from_employee_id 
+                    AND eh.action_type = 'AssetTransferred' 
+                    AND eh.title = 'Bàn giao điều chuyển ' || a.asset_code
+                    AND eh.action_date = h.action_date
+              );
         ";
 
         db.Database.ExecuteSqlRaw(createTablesSql);
@@ -474,6 +588,13 @@ using (var scope = app.Services.CreateScope())
             db.SaveChanges();
         }
 
+        // Bổ sung loại "Thiết bị khác" (nhập theo số lượng, không cần S/N) nếu chưa có
+        if (!db.AssetCategories.Any(c => c.CategoryCode == "OTHER"))
+        {
+            db.AssetCategories.Add(new QLKho.Api.Models.Entities.AssetCategory { CategoryName = "Thiết bị khác", CategoryCode = "OTHER", Description = "Thiết bị / phụ kiện khác, quản lý theo số lượng (túi, cáp, ...)", IsActive = true });
+            db.SaveChanges();
+        }
+
         // 4. Seed danh mục Hãng sản xuất ban đầu nếu bảng rỗng
         if (!db.Brands.Any())
         {
@@ -527,6 +648,23 @@ using (var scope = app.Services.CreateScope())
                 FullName = "Chuyên Viên Nhân Sự (HR)",
                 Role = "HR",
                 Email = "hr@qlkho.local",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            });
+            db.SaveChanges();
+        }
+
+        // 6b. Tự động khởi tạo tài khoản chỉ xem tài sản (Viewer) mặc định (tk: viewer, mk: 123456)
+        var viewerUser = db.Users.FirstOrDefault(u => u.Username.ToLower() == "viewer");
+        if (viewerUser == null)
+        {
+            db.Users.Add(new QLKho.Api.Models.Entities.User
+            {
+                Username = "viewer",
+                Password = "123456",
+                FullName = "Tài Khoản Xem Tài Sản (Viewer)",
+                Role = "Viewer",
+                Email = "viewer@qlkho.local",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             });
@@ -601,6 +739,26 @@ app.UseSwaggerUI(c =>
 });
 
 app.UseCors("AllowAllOrigins");
+
+app.UseRateLimiter();
+
+// Viewer (token_viewer_*) chỉ được đọc: chặn mọi request ghi, trừ đăng nhập
+app.Use(async (context, next) =>
+{
+    var auth = context.Request.Headers.Authorization.ToString();
+    var isWrite = !(HttpMethods.IsGet(context.Request.Method)
+        || HttpMethods.IsHead(context.Request.Method)
+        || HttpMethods.IsOptions(context.Request.Method));
+    if (isWrite
+        && auth.StartsWith("Bearer token_viewer_", StringComparison.Ordinal)
+        && !context.Request.Path.StartsWithSegments("/api/auth/login"))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsJsonAsync(new { message = "Tài khoản Viewer chỉ có quyền xem, không có quyền chỉnh sửa." });
+        return;
+    }
+    await next();
+});
 
 app.UseAuthorization();
 

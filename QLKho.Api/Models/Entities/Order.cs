@@ -12,9 +12,8 @@ public class Order
     [MaxLength(50)]
     public string OrderCode { get; set; } = string.Empty;
 
-    [Required]
     [MaxLength(255)]
-    public string OrderName { get; set; } = string.Empty;
+    public string? OrderName { get; set; }
 
     [MaxLength(100)]
     public string? PrCode { get; set; }
@@ -23,6 +22,9 @@ public class Order
 
     [MaxLength(255)]
     public string? ProjectName { get; set; }
+
+    // Bộ phận đặt hàng: thiết bị của đơn chỉ được cấp phát/điều chuyển cho nhân sự bộ phận này (null = không giới hạn)
+    public int? DepartmentID { get; set; }
 
     public int? SupplierID { get; set; }
 
@@ -52,6 +54,9 @@ public class Order
     // Navigation properties
     [ForeignKey("SupplierID")]
     public virtual Supplier? Supplier { get; set; }
+
+    [ForeignKey("DepartmentID")]
+    public virtual Department? Department { get; set; }
 
     public virtual ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
     public virtual ICollection<OrderDeviceItem> Devices { get; set; } = new List<OrderDeviceItem>();

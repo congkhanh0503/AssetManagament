@@ -53,6 +53,9 @@ public class BundleAssignDto
     public int? KeyboardAssetID { get; set; }
     public int? MonitorAssetID { get; set; }
 
+    // Cấp nhiều thiết bị cùng loại (chuột, bàn phím...) trong một lần
+    public List<int>? ExtraAssetIDs { get; set; }
+
     [Required(ErrorMessage = "Vui lòng chọn nhân viên tiếp nhận")]
     public int ToEmployeeID { get; set; }
 
@@ -113,6 +116,7 @@ public class TransferAssetDto
 
     public string? ConditionStatus { get; set; } = "Hoạt động bình thường";
     public string? Note { get; set; }
+    public string? NewAccount { get; set; }
     public string CreatedBy { get; set; } = "Admin";
 }
 
@@ -175,7 +179,11 @@ public class AssetItemDto
     public string? HolderCode { get; set; }
     public string? HolderDepartment { get; set; }
     public string? HolderDepartmentCode { get; set; }
+    public int? DepartmentID { get; set; }
+    // Bộ phận đặt hàng của đơn chứa thiết bị này (nếu có) - chỉ được cấp phát cho bộ phận đó
+    public int? OrderDepartmentID { get; set; }
     public string? HolderEmail { get; set; }
+    public string? HolderAccount { get; set; }
     public string DynamicLocation { get; set; } = string.Empty;
     public string? WarehouseLocation { get; set; }
     public string? Note { get; set; }

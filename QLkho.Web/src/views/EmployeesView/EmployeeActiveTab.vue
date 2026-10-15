@@ -54,10 +54,6 @@
               <th style="min-width: 280px; width: 32%;">{{ $t('employees.table_employee_contact') }}</th>
               <th style="min-width: 180px; width: 22%;">{{ $t('employees.table_dept_title') }}</th>
               <th v-if="currentTab === 'resigned'" style="text-align: center; width: 130px;">{{ $t('employees.table_leave_date') }}</th>
-              <th style="text-align: center; width: 85px;">QAD</th>
-              <th style="text-align: center; width: 85px;">OA</th>
-              <th style="text-align: center; width: 85px;">Email</th>
-              <th style="text-align: center; width: 85px;">AD</th>
               <th style="text-align: center; width: 130px;">{{ $t('employees.table_assets') }}</th>
             </tr>
           </thead>
@@ -113,36 +109,6 @@
               <!-- Cột ngày nghỉ việc (Dành riêng cho Tab Đã Nghỉ Việc) -->
               <td v-if="currentTab === 'resigned'" style="text-align: center;">
                 <span class="leave-date-badge">{{ emp.leaveDate ? formatDate(emp.leaveDate) : $t('employees.resigned_badge') }}</span>
-              </td>
-
-              <!-- 4 Cột Tài khoản kèm theo -->
-              <td 
-                style="text-align: center;" 
-                :class="{ 'cursor-pointer': !isHR, 'cursor-default': isHR }"
-                @click="!isHR && $emit('open-accounts', emp)" 
-              >
-                <StatusBadge :status="emp.qaD_Status" type="account" />
-              </td>
-              <td 
-                style="text-align: center;" 
-                :class="{ 'cursor-pointer': !isHR, 'cursor-default': isHR }"
-                @click="!isHR && $emit('open-accounts', emp)" 
-              >
-                <StatusBadge :status="emp.oA_Status" type="account" />
-              </td>
-              <td 
-                style="text-align: center;" 
-                :class="{ 'cursor-pointer': !isHR, 'cursor-default': isHR }"
-                @click="!isHR && $emit('open-accounts', emp)" 
-              >
-                <StatusBadge :status="emp.email_Status" type="account" />
-              </td>
-              <td 
-                style="text-align: center;" 
-                :class="{ 'cursor-pointer': !isHR, 'cursor-default': isHR }"
-                @click="!isHR && $emit('open-accounts', emp)" 
-              >
-                <StatusBadge :status="emp.aD_Status" type="account" />
               </td>
 
               <!-- Cột Thiết bị -->
@@ -201,7 +167,6 @@
 
 <script setup>
 import { computed } from 'vue'
-import StatusBadge from '@/components/common/StatusBadge.vue'
 import Pagination from '@/components/common/Pagination.vue'
 
 const props = defineProps({
@@ -222,7 +187,6 @@ defineEmits([
   'update:currentPage',
   'update:pageSize',
   'edit',
-  'open-accounts',
   'open-assets',
   'open-history'
 ])

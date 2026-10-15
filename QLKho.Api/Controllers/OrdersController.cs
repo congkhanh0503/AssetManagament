@@ -55,6 +55,25 @@ public class OrdersController : ControllerBase
         return Ok(new { message = "Xóa đơn hàng thành công" });
     }
 
+    [HttpPost("{id}/items")]
+    public async Task<IActionResult> AddItem(int id, [FromBody] CreateOrderItemDto dto)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        try
+        {
+            var createdItem = await _orderService.AddOrderItemAsync(id, dto);
+            return Ok(createdItem);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("{id}/devices")]
     public async Task<IActionResult> AddDevice(int id, [FromBody] AddDeviceToOrderDto dto)
     {
@@ -79,6 +98,24 @@ public class OrdersController : ControllerBase
         try
         {
             var devices = await _orderService.BulkAddDevicesToOrderAsync(id, dto);
+            return Ok(devices);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("{id}/devices/quantity")]
+    public async Task<IActionResult> AddQuantityDevices(int id, [FromBody] AddQuantityDevicesToOrderDto dto)
+    {
+        try
+        {
+            var devices = await _orderService.AddQuantityDevicesToOrderAsync(id, dto);
             return Ok(devices);
         }
         catch (KeyNotFoundException ex)

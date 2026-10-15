@@ -18,6 +18,7 @@ public class OrderService : IOrderService
     public async Task<List<OrderSummaryDto>> GetAllOrdersAsync(string? status = null, string? keyword = null)
     {
         var query = _context.Orders
+            .Include(o => o.Department)
             .Include(o => o.Items)
             .Include(o => o.Devices)
                 .ThenInclude(d => d.Asset)
@@ -52,6 +53,7 @@ public class OrderService : IOrderService
     public async Task<OrderDetailDto?> GetOrderByIdAsync(int orderId)
     {
         var order = await _context.Orders
+            .Include(o => o.Department)
             .Include(o => o.Items)
                 .ThenInclude(i => i.Category)
             .Include(o => o.Devices)
@@ -90,6 +92,8 @@ public class OrderService : IOrderService
             PrCode = order.PrCode,
             IsProjectBased = order.IsProjectBased,
             ProjectName = order.ProjectName,
+            DepartmentID = order.DepartmentID,
+            DepartmentName = order.Department != null ? order.Department.DepartmentName : null,
             SupplierID = order.SupplierID,
             SupplierName = order.SupplierName,
             OrderDate = order.OrderDate,
@@ -181,13 +185,17 @@ public class OrderService : IOrderService
             supplierName = supplier?.SupplierName;
         }
 
+        string? pr = dto.PrCode?.Trim();
+        string? name = dto.OrderName?.Trim() ?? pr;
+
         var order = new Order
         {
             OrderCode = code,
-            OrderName = dto.OrderName.Trim(),
-            PrCode = dto.PrCode?.Trim(),
+            OrderName = name ?? code,
+            PrCode = pr,
             IsProjectBased = dto.IsProjectBased,
             ProjectName = dto.IsProjectBased ? dto.ProjectName?.Trim() : null,
+            DepartmentID = dto.DepartmentID,
             SupplierID = dto.SupplierID,
             SupplierName = supplierName,
             OrderDate = dto.OrderDate ?? DateTime.UtcNow,
@@ -240,10 +248,18 @@ public class OrderService : IOrderService
         var order = await _context.Orders.FindAsync(orderId);
         if (order == null) return null;
 
-        order.OrderName = dto.OrderName.Trim();
         order.PrCode = dto.PrCode?.Trim();
+        if (!string.IsNullOrWhiteSpace(dto.OrderName))
+        {
+            order.OrderName = dto.OrderName.Trim();
+        }
+        else if (!string.IsNullOrWhiteSpace(order.PrCode))
+        {
+            order.OrderName = order.PrCode;
+        }
         order.IsProjectBased = dto.IsProjectBased;
         order.ProjectName = dto.IsProjectBased ? dto.ProjectName?.Trim() : null;
+        order.DepartmentID = dto.DepartmentID;
         order.SupplierID = dto.SupplierID;
         order.SupplierName = dto.SupplierName;
         order.ExpectedDeliveryDate = dto.ExpectedDeliveryDate;
@@ -261,6 +277,7 @@ public class OrderService : IOrderService
     public async Task<bool> DeleteOrderAsync(int orderId)
     {
         var order = await _context.Orders
+            .Include(o => o.Department)
             .Include(o => o.Items)
             .Include(o => o.Devices)
             .FirstOrDefaultAsync(o => o.OrderID == orderId);
@@ -270,6 +287,57 @@ public class OrderService : IOrderService
         _context.Orders.Remove(order);
         await _context.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<OrderItemDetailDto> AddOrderItemAsync(int orderId, CreateOrderItemDto dto)
+    {
+        var order = await _context.Orders.FindAsync(orderId);
+        if (order == null)
+            throw new KeyNotFoundException("Không tìm thấy đơn hàng.");
+
+        if (string.IsNullOrWhiteSpace(dto.ModelName))
+            throw new ArgumentException("Tên model thiết bị không được để trống.");
+
+        string? catName = dto.CategoryName;
+        if (dto.CategoryID.HasValue && string.IsNullOrWhiteSpace(catName))
+        {
+            var cat = await _context.AssetCategories.FindAsync(dto.CategoryID.Value);
+            catName = cat?.CategoryName;
+        }
+
+        var item = new OrderItem
+        {
+            OrderID = orderId,
+            CategoryID = dto.CategoryID,
+            CategoryName = catName,
+            ModelName = dto.ModelName.Trim(),
+            Brand = dto.Brand?.Trim(),
+            Specifications = dto.Specifications?.Trim(),
+            ExpectedQuantity = Math.Max(1, dto.ExpectedQuantity),
+            ReceivedQuantity = 0,
+            UnitPrice = dto.UnitPrice,
+            Note = dto.Note?.Trim(),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.OrderItems.Add(item);
+        order.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return new OrderItemDetailDto
+        {
+            OrderItemID = item.OrderItemID,
+            OrderID = item.OrderID,
+            CategoryID = item.CategoryID,
+            CategoryName = item.CategoryName,
+            ModelName = item.ModelName,
+            Brand = item.Brand,
+            Specifications = item.Specifications,
+            ExpectedQuantity = item.ExpectedQuantity,
+            ReceivedQuantity = item.ReceivedQuantity,
+            UnitPrice = item.UnitPrice,
+            Note = item.Note
+        };
     }
 
     public async Task<OrderDeviceItemDto> AddDeviceToOrderAsync(int orderId, AddDeviceToOrderDto dto)
@@ -530,6 +598,77 @@ public class OrderService : IOrderService
         }).ToList();
     }
 
+    // Thiết bị không có S/N (chuột, bàn phím...): chỉ nhập số lượng, hệ thống tự sinh đủ số dòng
+    public async Task<List<OrderDeviceItemDto>> AddQuantityDevicesToOrderAsync(int orderId, AddQuantityDevicesToOrderDto dto)
+    {
+        var order = await _context.Orders.FindAsync(orderId);
+        if (order == null) throw new KeyNotFoundException("Không tìm thấy đơn hàng.");
+
+        var item = await _context.OrderItems
+            .Include(i => i.Category)
+            .FirstOrDefaultAsync(i => i.OrderItemID == dto.OrderItemID && i.OrderID == orderId);
+        if (item == null) throw new KeyNotFoundException("Dòng thiết bị không thuộc đơn hàng này.");
+
+        if (dto.Quantity <= 0) throw new InvalidOperationException("Số lượng phải lớn hơn 0.");
+
+        int currentReceived = await _context.OrderDeviceItems.CountAsync(d => d.OrderItemID == item.OrderItemID);
+        int remaining = item.ExpectedQuantity - currentReceived;
+        if (remaining <= 0)
+        {
+            throw new InvalidOperationException($"Loại thiết bị '{item.ModelName}' đã nhận đủ số lượng ({currentReceived}/{item.ExpectedQuantity}) theo đơn đặt hàng! Không thể thêm tiếp.");
+        }
+        if (dto.Quantity > remaining)
+        {
+            throw new InvalidOperationException($"Loại thiết bị '{item.ModelName}' chỉ còn cần nhập thêm {remaining} (đã nhận {currentReceived}/{item.ExpectedQuantity}), nhưng bạn nhập {dto.Quantity}!");
+        }
+
+        string prefix = GetPrefixByCategory(item.CategoryID, item.ModelName);
+        int maxNum = await GetMaxAssetCodeNumberAsync(prefix);
+        var created = new List<OrderDeviceItem>();
+        for (int i = 0; i < dto.Quantity; i++)
+        {
+            var device = new OrderDeviceItem
+            {
+                OrderID = orderId,
+                OrderItemID = item.OrderItemID,
+                AssetCode = $"{prefix}{++maxNum:D5}",
+                SerialNumber = null,
+                AssetName = item.ModelName,
+                CategoryID = item.CategoryID,
+                Brand = item.Brand,
+                Specifications = item.Specifications,
+                WarehouseLocation = dto.WarehouseLocation?.Trim() ?? "Kho IT - Kệ A1",
+                IsTransferredToAsset = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.OrderDeviceItems.Add(device);
+            created.Add(device);
+        }
+
+        item.ReceivedQuantity = currentReceived + dto.Quantity;
+        if (order.Status == "Pending") order.Status = "Receiving";
+        order.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return created.Select(d => new OrderDeviceItemDto
+        {
+            DeviceItemID = d.DeviceItemID,
+            OrderID = d.OrderID,
+            OrderItemID = d.OrderItemID,
+            AssetCode = d.AssetCode,
+            SerialNumber = d.SerialNumber,
+            AssetName = d.AssetName,
+            CategoryID = d.CategoryID,
+            CategoryName = item.Category?.CategoryName ?? item.CategoryName,
+            Brand = d.Brand,
+            Specifications = d.Specifications,
+            WarehouseLocation = d.WarehouseLocation,
+            IsTransferredToAsset = d.IsTransferredToAsset,
+            AssetID = d.AssetID,
+            CreatedAt = d.CreatedAt
+        }).ToList();
+    }
+
     public async Task<bool> RemoveDeviceFromOrderAsync(int orderId, int deviceItemId)
     {
         var device = await _context.OrderDeviceItems
@@ -554,11 +693,17 @@ public class OrderService : IOrderService
     public async Task<SyncOrderToAssetsResultDto> SyncOrderToAssetsAsync(int orderId)
     {
         var order = await _context.Orders
+            .Include(o => o.Department)
             .Include(o => o.Items)
             .Include(o => o.Devices)
             .FirstOrDefaultAsync(o => o.OrderID == orderId);
 
         if (order == null) throw new KeyNotFoundException("Không tìm thấy đơn hàng.");
+
+        // Đơn do bộ phận khác đặt: thiết bị thuộc bộ phận đó, không đưa vào Quản lý tài sản của kho
+        if (order.DepartmentID.HasValue)
+            throw new InvalidOperationException(
+                $"Đơn hàng này do bộ phận {order.Department?.DepartmentName ?? "khác"} đặt nên không đồng bộ vào Quản lý tài sản.");
 
         var pendingDevices = order.Devices.Where(d => !d.IsTransferredToAsset).ToList();
         if (!pendingDevices.Any())
@@ -687,6 +832,8 @@ public class OrderService : IOrderService
             PrCode = order.PrCode,
             IsProjectBased = order.IsProjectBased,
             ProjectName = order.ProjectName,
+            DepartmentID = order.DepartmentID,
+            DepartmentName = order.Department != null ? order.Department.DepartmentName : null,
             SupplierID = order.SupplierID,
             SupplierName = order.SupplierName,
             OrderDate = order.OrderDate,

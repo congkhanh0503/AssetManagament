@@ -18,6 +18,7 @@ public class UploadDocumentDto
     public int? AssetID { get; set; }
     public int? EmployeeID { get; set; }
     public int? DepartmentID { get; set; }
+    public int? OrderID { get; set; }
     public string? Description { get; set; }
     public string UploadedBy { get; set; } = "Admin";
 }
@@ -29,6 +30,7 @@ public class DocumentFilterDto
     public int? AssetID { get; set; }
     public int? EmployeeID { get; set; }
     public int? DepartmentID { get; set; }
+    public int? OrderID { get; set; }
 }
 
 public class DocumentItemDto
@@ -51,6 +53,7 @@ public class DocumentItemDto
     public string? EmployeeName { get; set; }
     public int? DepartmentID { get; set; }
     public string? DepartmentName { get; set; }
+    public int? OrderID { get; set; }
     public string UploadedBy { get; set; } = string.Empty;
     public string? Description { get; set; }
     public DateTime CreatedAt { get; set; }

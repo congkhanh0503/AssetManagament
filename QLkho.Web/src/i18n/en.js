@@ -61,7 +61,8 @@ export default {
     invalid_credentials: 'Invalid username or password',
     role_admin: 'Administrator',
     role_it: 'IT Support',
-    role_hr: 'HR Specialist'
+    role_hr: 'HR Specialist',
+    role_viewer: 'Asset Viewer'
   },
   sidebar: {
     section_overview: 'Overview & Operations',
@@ -69,10 +70,12 @@ export default {
     assets: 'Asset & Inventory Management',
     documents: 'PDF Archives / Documents',
     section_management: 'Master Data',
-    employees: 'Employees & Accounts',
+    employees: 'Employees',
+    accounts: 'System Accounts',
     departments: 'Departments & Org',
     categories_suppliers: 'Categories & Suppliers',
     hr_section_title: 'HR Operations Module',
+    viewer_restricted_notice: 'This account can view all tabs but cannot add, edit, delete or assign anything.',
     hr_restricted_notice: 'HR accounts only have permission to view & manage employee records, working dates and system account statuses.',
     backend_status: 'Backend API (ASP.NET Core)',
     db_connected: 'MS SQL Server Connected'
@@ -226,6 +229,9 @@ export default {
     action_delete: 'Delete Asset'
   },
   employees: {
+    table_created_date: 'Created Date',
+    table_manager: 'Department Manager',
+    manager_hint: 'Pick the main manager or a sub-manager of the department responsible for this employee.',
     title: 'Employees & 4 System Accounts',
     subtitle: 'Manage staff records, hardware custody, working dates and 4 enterprise accounts (QAD, OA, Email, AD)',
     tab_active: 'Active Working',
@@ -311,6 +317,13 @@ export default {
     btn_download: 'Download'
   },
   departments: {
+    tab_departments: 'Departments',
+    tab_managers: 'Managers',
+    manager_pick_employee: '-- Select an employee with manager title --',
+    manager_add: 'Add Manager',
+    manager_empty: 'No managers yet. Select an employee above to add.',
+    manager_col_name: 'Full name',
+    sub_managers: 'Sub-managers',
     title: 'Department & Organization Setup',
     subtitle: 'Organizational hierarchy, department codes and business units',
     btn_add: 'Add Department',

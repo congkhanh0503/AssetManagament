@@ -14,17 +14,17 @@
         </button>
 
         <!-- Nút Import Cấp Phát / Bàn Giao Hàng Loạt -->
-        <button type="button" class="btn btn-primary" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border: none;" @click="isHandoverImportOpen = true">
+        <button v-if="!isViewer" type="button" class="btn btn-primary" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border: none;" @click="isHandoverImportOpen = true">
           📋 Import Cấp Phát
         </button>
 
         <!-- Nút Tự Động Quét & Tách Biên Bản PDF (QR) -->
-        <button type="button" class="btn btn-purple-qr" @click="isAutoSplitModalOpen = true" title="Tải lên file PDF scan tổng, tự động nhận diện QR và gán biên bản">
+        <button v-if="!isViewer" type="button" class="btn btn-purple-qr" @click="isAutoSplitModalOpen = true" title="Tải lên file PDF scan tổng, tự động nhận diện QR và gán biên bản">
           ⚡ Quét Biên Bản (QR)
         </button>
 
         <!-- Nút Import Excel -->
-        <button type="button" class="btn btn-secondary" @click="isImportOpen = true">
+        <button v-if="!isViewer" type="button" class="btn btn-secondary" @click="isImportOpen = true">
           📥 {{ $t('assets.btn_import') }}
         </button>
 
@@ -34,7 +34,7 @@
         </button>
 
         <!-- Nút Quản Lý Hãng -->
-        <button type="button" class="btn btn-secondary" @click="isBrandManagerOpen = true">
+        <button v-if="!isViewer" type="button" class="btn btn-secondary" @click="isBrandManagerOpen = true">
           🏷️ {{ $t('assets.btn_brands') }} ({{ brands.length }})
         </button>
 
@@ -47,7 +47,7 @@
         </button>
 
         <!-- Nút Thêm Mới Thiết Bị -->
-        <button type="button" class="btn btn-primary" @click="openCreateModal">
+        <button v-if="!isViewer" type="button" class="btn btn-primary" @click="openCreateModal">
           ➕ {{ $t('assets.btn_add') }}
         </button>
       </div>
@@ -76,6 +76,7 @@
       :is-open="isDetailOpen"
       :asset="assetDetail"
       :loading="loadingDetail"
+      :read-only="isViewer"
       @close="isDetailOpen = false"
       @assign="handleOpenAssignFromDetail"
       @transfer="handleOpenTransferFromDetail"
@@ -294,12 +295,18 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { assetsApi, categoriesApi, departmentsApi, employeesApi, suppliersApi, brandsApi } from '@/api/client'
+import { getCurrentUser } from '@/api/auth'
+
+const isViewer = computed(() => getCurrentUser()?.role === 'Viewer')
 import { getRowValue } from '@/utils/excelImport'
 import Modal from '@/components/common/Modal.vue'
 import Toast from '@/components/common/Toast.vue'
 import HandoverHistoryModal from '@/components/assets/HandoverHistoryModal.vue'
 import HandoverAutoSplitModal from '@/components/common/HandoverAutoSplitModal.vue'
+
+const route = useRoute()
 
 // Import các sub-components đã tách nhỏ
 import AssetsFilterBar from './AssetsView/AssetsFilterBar.vue'
@@ -728,9 +735,10 @@ const submitCreateAsset = async () => {
 
     const isMouse = catNameLower.includes('chuột') || catNameLower.includes('mouse') || nameLower.includes('chuột') || nameLower.includes('mouse')
     const isKb = catNameLower.includes('bàn phím') || catNameLower.includes('keyboard') || nameLower.includes('bàn phím') || nameLower.includes('keyboard')
+    const isOther = catNameLower.includes('thiết bị khác')
     const isComp = catNameLower.includes('laptop') || catNameLower.includes('máy tính') || catNameLower.includes('pc') || catNameLower.includes('desktop')
 
-    if (isMouse || isKb) {
+    if (isMouse || isKb || isOther) {
       const createdList = await assetsApi.createAccessoryLot({
         categoryID: createForm.categoryID,
         brand: createForm.brand || 'GEN',
@@ -740,7 +748,7 @@ const submitCreateAsset = async () => {
         warehouseLocation: createForm.warehouseLocation || null,
         note: createForm.note || null
       })
-      toastRef.value?.show(`Đã nhập thành công ${createdList.length} ${isKb ? 'bàn phím' : 'chuột'} ${createForm.brand || ''} vào kho!`, 'success')
+      toastRef.value?.show(`Đã nhập thành công ${createdList.length} ${isKb ? 'bàn phím' : (isOther && !isMouse ? 'thiết bị khác' : 'chuột')} ${createForm.brand || ''} vào kho!`, 'success')
     } else {
       const payload = {
         assetCode: createForm.assetCode.trim(),
@@ -845,7 +853,8 @@ const submitTransfer = async (formData) => {
     await assetsApi.transfer(selectedAsset.value.assetID, {
       toEmployeeID: formData.toEmployeeID,
       conditionStatus: formData.conditionStatus,
-      note: formData.note
+      note: formData.note,
+      newAccount: formData.newAccount || undefined
     })
     toastRef.value?.show('Đã điều chuyển thiết bị thành công!', 'success')
     isTransferOpen.value = false
@@ -1230,6 +1239,9 @@ const handleExportCsv = () => {
 // LIFECYCLE HOOKS
 // -------------------------------------------------------------
 onMounted(async () => {
+  if (route.query.departmentID || route.query.departmentId) {
+    filters.departmentID = Number(route.query.departmentID || route.query.departmentId)
+  }
   await Promise.all([fetchAssets(), fetchMetadata()])
 })
 </script>

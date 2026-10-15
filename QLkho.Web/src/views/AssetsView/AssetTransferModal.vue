@@ -20,6 +20,20 @@
         />
       </div>
 
+      <div class="form-group" v-if="form.toEmployeeID">
+        <label class="form-label">Tài khoản máy tính (AD Account) của người nhận</label>
+        <input 
+          type="text" 
+          class="form-control" 
+          style="font-family: monospace; font-weight: 600;" 
+          v-model="form.newAccount" 
+          placeholder="VD: AP\Bob.Liu" 
+        />
+        <small class="text-muted" style="font-size: 0.75rem; margin-top: 3px; display: block;">
+          💡 Hệ thống tự động gợi ý theo email nhân sự và cập nhật thông tin máy tính
+        </small>
+      </div>
+
       <div class="form-group">
         <label class="form-label">Tình trạng thực tế lúc điều chuyển</label>
         <input type="text" class="form-control" v-model="form.conditionStatus" placeholder="Vd: Máy hoạt động bình thường..." />
@@ -73,6 +87,7 @@ const emit = defineEmits(['close', 'submit'])
 
 const form = reactive({
   toEmployeeID: null,
+  newAccount: '',
   conditionStatus: 'Máy hoạt động tốt',
   note: ''
 })
@@ -80,14 +95,36 @@ const form = reactive({
 watch(() => props.isOpen, (open) => {
   if (open) {
     form.toEmployeeID = null
+    form.newAccount = ''
     form.conditionStatus = 'Máy hoạt động tốt'
     form.note = ''
   }
 })
 
+watch(() => form.toEmployeeID, (newEmpId) => {
+  if (newEmpId) {
+    const match = props.employees.find(e => e.employeeID === newEmpId)
+    if (match) {
+      if (match.email) {
+        const prefix = match.email.split('@')[0].trim()
+        form.newAccount = `AP\\${prefix}`
+      } else if (match.englishName) {
+        form.newAccount = `AP\\${match.englishName.trim()}`
+      } else if (match.employeeCode) {
+        form.newAccount = `AP\\${match.employeeCode.trim()}`
+      }
+    }
+  } else {
+    form.newAccount = ''
+  }
+})
+
 const availableEmployees = computed(() => {
   if (!props.asset) return props.employees
-  return props.employees.filter(e => e.employeeID !== props.asset.currentHolderID)
+  const deptId = props.asset.orderDepartmentID
+  return props.employees.filter(e =>
+    e.employeeID !== props.asset.currentHolderID && (!deptId || e.departmentID === deptId)
+  )
 })
 
 const handleSubmit = () => {

@@ -13,7 +13,7 @@
 
     <div v-else-if="asset" class="detail-container">
       <!-- Control Actions Toolbar -->
-      <div class="detail-toolbar-card">
+      <div v-if="!readOnly" class="detail-toolbar-card">
         <div class="toolbar-label">Thao Tác & Quản Trị Thiết Bị:</div>
         <div class="toolbar-buttons-grid">
           <!-- Nút Cấp phát (Khi máy Available) -->
@@ -184,6 +184,10 @@ defineProps({
     default: null
   },
   loading: {
+    type: Boolean,
+    default: false
+  },
+  readOnly: {
     type: Boolean,
     default: false
   }

@@ -109,16 +109,22 @@
               <StatusBadge :status="asset.status" type="asset" />
             </div>
 
-            <!-- Cấu hình máy tính / specs -->
-            <div v-if="asset.specifications" class="asset-specs-highlight">
-              ⚙️ <strong>Cấu hình:</strong> {{ asset.specifications }}
-            </div>
-
             <div class="asset-specs-grid-row">
               <div class="spec-col"><span class="spec-lbl">Loại thiết bị:</span> <strong>{{ asset.categoryName }}</strong></div>
               <div class="spec-col"><span class="spec-lbl">Số S/N:</span> <span class="serial-text">{{ asset.serialNumber || '---' }}</span></div>
               <div class="spec-col"><span class="spec-lbl">Ngày cấp:</span> <span style="color: #a5b4fc;">{{ formatDate(asset.assignedDate) }}</span></div>
               <div class="spec-col" v-if="asset.supplierName"><span class="spec-lbl">Nhà cung cấp:</span> {{ asset.supplierName }}</div>
+            </div>
+
+            <button type="button" style="display:flex;align-items:center;gap:10px;margin:8px 0 4px;background:transparent;border:none;color:#4f46e5;font-size:0.8rem;font-weight:600;cursor:pointer;padding:2px 0;" @click="toggleExpanded(asset.assetID)">
+              {{ expandedAssetIds.includes(asset.assetID) ? 'Thu gọn ▴' : 'Xem thêm (cấu hình, ghi chú, biên bản) ▾' }}
+              <span v-if="!asset.handoverDocument" style="color:#d97706;" title="Chưa có biên bản">⚠️ Chưa có biên bản</span>
+            </button>
+
+            <div v-if="expandedAssetIds.includes(asset.assetID)">
+            <!-- Cấu hình máy tính / specs -->
+            <div v-if="asset.specifications" class="asset-specs-highlight">
+              ⚙️ <strong>Cấu hình:</strong> {{ asset.specifications }}
             </div>
 
             <div v-if="asset.note" class="asset-note-box">
@@ -234,6 +240,7 @@
                 @change="handlePdfSelected($event, asset.assetID)"
               />
             </div>
+            </div>
 
             <!-- THANH THAO TÁC NGHIỆP VỤ TRỰC TIẾP TRÊN THIẾT BỊ (CHỈ DÀNH CHO ADMIN / IT) -->
             <div v-if="!isHR" class="asset-item-actions-bar">
@@ -327,8 +334,10 @@
           <label class="form-label">Chọn Thiết Bị Sẵn Sàng Trong Kho (Available) *</label>
           <AssetSelector 
             v-model="assignForm.assetID" 
+            v-model:quantity="assignForm.quantity"
             :assets="availableWarehouseAssets" 
             :categories="categories" 
+            group-quantity
           />
         </div>
 
@@ -342,8 +351,8 @@
           </label>
           <select class="form-control" v-model="assignForm.mouseAssetID">
             <option :value="null">-- Không cấp chuột kèm theo --</option>
-            <option v-for="m in availableWarehouseMice" :key="m.assetID" :value="m.assetID">
-              🖱️ {{ m.assetCode }} - {{ m.assetName }} ({{ m.brand || '---' }}) {{ m.serialNumber ? `- S/N: ${m.serialNumber}` : '' }}
+            <option v-for="m in miceOptions" :key="m.assetID" :value="m.assetID">
+              🖱️ {{ m.assetName }} ({{ m.brand || '---' }}) - còn {{ m.groupCount }} cái
             </option>
           </select>
         </div>
@@ -370,8 +379,8 @@
             </label>
             <select class="form-control" v-model="assignForm.keyboardAssetID">
               <option :value="null">-- Không cấp bàn phím kèm theo --</option>
-              <option v-for="kb in availableWarehouseKeyboards" :key="kb.assetID" :value="kb.assetID">
-                ⌨️ {{ kb.assetCode }} - {{ kb.assetName }} ({{ kb.brand || '---' }}) {{ kb.serialNumber ? `- S/N: ${kb.serialNumber}` : '' }}
+              <option v-for="kb in keyboardOptions" :key="kb.assetID" :value="kb.assetID">
+                ⌨️ {{ kb.assetName }} ({{ kb.brand || '---' }}) - còn {{ kb.groupCount }} cái
               </option>
             </select>
           </div>
@@ -383,8 +392,8 @@
             </label>
             <select class="form-control" v-model="assignForm.mouseAssetID">
               <option :value="null">-- Không cấp chuột kèm theo --</option>
-              <option v-for="m in availableWarehouseMice" :key="m.assetID" :value="m.assetID">
-                🖱️ {{ m.assetCode }} - {{ m.assetName }} ({{ m.brand || '---' }}) {{ m.serialNumber ? `- S/N: ${m.serialNumber}` : '' }}
+              <option v-for="m in miceOptions" :key="m.assetID" :value="m.assetID">
+                🖱️ {{ m.assetName }} ({{ m.brand || '---' }}) - còn {{ m.groupCount }} cái
               </option>
             </select>
           </div>
@@ -427,6 +436,20 @@
             :departments="departments" 
             :exclude-employee-id="employee?.employeeID"
           />
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;" v-if="transferForm.toEmployeeID">
+          <label class="form-label">Tài khoản máy tính (AD Account) của người nhận</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            style="font-family: monospace; font-weight: 600;" 
+            v-model="transferForm.newAccount" 
+            placeholder="VD: AP\Bob.Liu" 
+          />
+          <small class="text-muted" style="font-size: 0.75rem; margin-top: 3px; display: block;">
+            💡 Hệ thống tự động gợi ý theo email nhân sự và cập nhật thông tin máy tính
+          </small>
         </div>
 
         <div class="form-group" style="margin-top: 14px;">
@@ -527,7 +550,7 @@
 
           <div class="form-group">
             <label class="form-label">Ngày Dự Kiến Trả</label>
-            <input type="date" class="form-control" v-model="reportIssueForm.expectedReturnDate" />
+            <DateTextInput v-model="reportIssueForm.expectedReturnDate" />
           </div>
         </div>
 
@@ -544,10 +567,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import DateTextInput from '@/components/common/DateTextInput.vue'
+import { ref, reactive, computed, watch } from 'vue'
 import Modal from '@/components/common/Modal.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import AssetSelector from '@/components/common/AssetSelector.vue'
+import { isQuantityAsset } from '@/utils/assetKind'
 import EmployeeSelector from '@/components/common/EmployeeSelector.vue'
 
 const props = defineProps({
@@ -603,8 +628,16 @@ const isReturnOpen = ref(false)
 const isReportIssueOpen = ref(false)
 const selectedOpAsset = ref(null)
 
+const expandedAssetIds = ref([])
+const toggleExpanded = (id) => {
+  const i = expandedAssetIds.value.indexOf(id)
+  if (i >= 0) expandedAssetIds.value.splice(i, 1)
+  else expandedAssetIds.value.push(id)
+}
+
 const assignForm = reactive({
   assetID: null,
+  quantity: 1,
   mouseAssetID: null,
   monitorAssetID: null,
   keyboardAssetID: null,
@@ -614,8 +647,27 @@ const assignForm = reactive({
 
 const transferForm = reactive({
   toEmployeeID: null,
+  newAccount: '',
   conditionStatus: 'Hoạt động bình thường',
   note: ''
+})
+
+watch(() => transferForm.toEmployeeID, (newEmpId) => {
+  if (newEmpId) {
+    const match = props.employees.find(e => e.employeeID === newEmpId)
+    if (match) {
+      if (match.email) {
+        const prefix = match.email.split('@')[0].trim()
+        transferForm.newAccount = `AP\\${prefix}`
+      } else if (match.englishName) {
+        transferForm.newAccount = `AP\\${match.englishName.trim()}`
+      } else if (match.employeeCode) {
+        transferForm.newAccount = `AP\\${match.employeeCode.trim()}`
+      }
+    }
+  } else {
+    transferForm.newAccount = ''
+  }
 })
 
 const returnForm = reactive({
@@ -696,7 +748,11 @@ const toggleSelectAllNonLaptop = () => {
 }
 
 const availableWarehouseAssets = computed(() => {
-  return props.warehouseAssets.filter(a => a.status === 'Available')
+  // Ẩn thiết bị thuộc đơn hàng do bộ phận khác đặt
+  const deptId = props.employee?.departmentID
+  return props.warehouseAssets.filter(a =>
+    a.status === 'Available' && (!a.orderDepartmentID || a.orderDepartmentID === deptId)
+  )
 })
 
 const availableWarehouseMice = computed(() => {
@@ -726,6 +782,20 @@ const availableWarehouseKeyboards = computed(() => {
   })
 })
 
+// Gộp các thiết bị cùng model thành 1 lựa chọn kèm số lượng còn trong kho
+const groupByModel = (list) => {
+  const map = new Map()
+  for (const a of list) {
+    const key = [a.assetName, a.brand, a.specifications].map(v => (v || '').trim().toLowerCase()).join('|')
+    const g = map.get(key)
+    if (g) g.groupCount++
+    else map.set(key, { ...a, groupCount: 1 })
+  }
+  return [...map.values()]
+}
+const miceOptions = computed(() => groupByModel(availableWarehouseMice.value))
+const keyboardOptions = computed(() => groupByModel(availableWarehouseKeyboards.value))
+
 const isAssignLaptop = computed(() => {
   if (!assignForm.assetID) return false
   const asset = availableWarehouseAssets.value.find(a => a.assetID === assignForm.assetID)
@@ -740,6 +810,7 @@ const isAssignDesktop = computed(() => {
 
 const openAssignModal = () => {
   assignForm.assetID = null
+  assignForm.quantity = 1
   assignForm.mouseAssetID = null
   assignForm.monitorAssetID = null
   assignForm.keyboardAssetID = null
@@ -749,13 +820,25 @@ const openAssignModal = () => {
 }
 
 const submitAssign = () => {
-  emit('assign', { ...assignForm })
+  // Cấp nhiều thiết bị cùng loại (chuột, bàn phím): lấy N thiết bị đầu tiên của nhóm đã gộp
+  const ids = (assignForm.quantity > 1 && assignForm.assetID)
+    ? availableWarehouseAssets.value
+        .filter(a => {
+          const sel = availableWarehouseAssets.value.find(x => x.assetID === assignForm.assetID)
+          return sel && isQuantityAsset(sel.assetName, sel.categoryName) &&
+            ['assetName', 'brand', 'specifications', 'warehouseLocation'].every(k => (a[k] || '').trim().toLowerCase() === (sel[k] || '').trim().toLowerCase())
+        })
+        .map(a => a.assetID)
+    : []
+  const extraAssetIDs = ids.filter(id => id !== assignForm.assetID).slice(0, assignForm.quantity - 1)
+  emit('assign', { ...assignForm, extraAssetIDs })
   isAssignOpen.value = false
 }
 
 const openTransferModal = (asset) => {
   selectedOpAsset.value = asset
   transferForm.toEmployeeID = null
+  transferForm.newAccount = ''
   transferForm.conditionStatus = 'Hoạt động bình thường'
   transferForm.note = ''
   isTransferOpen.value = true

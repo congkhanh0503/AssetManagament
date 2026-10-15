@@ -9,6 +9,7 @@ public class DepartmentDto
     public string DepartmentName { get; set; } = string.Empty;
     public int? ManagerID { get; set; }
     public string? ManagerName { get; set; }
+    public List<string> SubManagers { get; set; } = new();
     public string? Description { get; set; }
     public bool IsActive { get; set; } = true;
     public int EmployeeCount { get; set; }
@@ -26,6 +27,7 @@ public class CreateDepartmentDto
     public string DepartmentName { get; set; } = string.Empty;
 
     public string? ManagerName { get; set; }
+    public List<string> SubManagers { get; set; } = new();
     public int? ManagerID { get; set; }
     public string? Description { get; set; }
 }

@@ -855,3 +855,25 @@ export async function downloadAccountTemplate(asXlsx = true) {
   }
 }
 
+
+/**
+ * Xuất danh sách nhân sự (đã lọc) kèm email và trạng thái các tài khoản hệ thống
+ */
+export async function exportEmployeeAccounts(employees, accounts, filename) {
+  const statusLabel = { Available: 'Hoạt động', Disable: 'Đang khóa', Deleted: 'Đã xóa' }
+  const headers = [
+    'Mã NV', 'Họ Tên', 'Tên Tiếng Anh', 'Email', 'Account', 'Phòng Ban', 'Tình Trạng',
+    ...accounts.map(a => a.label)
+  ]
+  const rows = employees.map(e => [
+    e.employeeCode || '',
+    e.fullName || '',
+    e.englishName || '',
+    e.email || '',
+    e.accountName || '',
+    e.departmentName || '',
+    e.status || '',
+    ...accounts.map(a => statusLabel[e[a.key]] || statusLabel.Disable)
+  ])
+  await exportToExcelFile(filename, 'Tai_Khoan', headers, rows)
+}

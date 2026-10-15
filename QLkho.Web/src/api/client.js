@@ -14,6 +14,13 @@ export const apiClient = axios.create({
 // Request interceptor: Gắn Token xác thực nếu có & Tự động sinh boundary cho FormData
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('qlkho_auth_token')
+
+  // Viewer chỉ được đọc: chặn mọi request ghi (trừ đăng nhập)
+  const method = (config.method || 'get').toLowerCase()
+  if (token?.startsWith('token_viewer_') && method !== 'get' && !config.url?.includes('/auth/login')) {
+    return Promise.reject(new Error('Tài khoản Viewer chỉ có quyền xem, không có quyền chỉnh sửa.'))
+  }
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -225,6 +232,12 @@ export const departmentsApi = {
   delete: (id) => apiClient.delete(`/departments/${id}`),
 }
 
+export const managersApi = {
+  getAll: () => apiClient.get('/managers'),
+  create: (data) => apiClient.post('/managers', data),
+  delete: (id) => apiClient.delete(`/managers/${id}`),
+}
+
 export const categoriesApi = {
   getAll: () => apiClient.get('/categories'),
   create: (data) => apiClient.post('/categories', data),
@@ -268,8 +281,10 @@ export const ordersApi = {
   create: (data) => apiClient.post('/orders', data),
   update: (id, data) => apiClient.put(`/orders/${id}`, data),
   delete: (id) => apiClient.delete(`/orders/${id}`),
+  addItem: (id, data) => apiClient.post(`/orders/${id}/items`, data),
   addDevice: (id, data) => apiClient.post(`/orders/${id}/devices`, data),
   bulkAddDevices: (id, data) => apiClient.post(`/orders/${id}/devices/bulk`, data),
+  addQuantityDevices: (id, data) => apiClient.post(`/orders/${id}/devices/quantity`, data),
   removeDevice: (id, deviceId) => apiClient.delete(`/orders/${id}/devices/${deviceId}`),
   syncToAssets: (id) => apiClient.post(`/orders/${id}/sync-assets`),
 }

@@ -303,8 +303,6 @@ public class ImportService : IImportService
                     if (!string.IsNullOrWhiteSpace(row.Email))
                     {
                         existingEmp.Email = row.Email.Trim();
-                        existingEmp.Email_Status = "Available";
-                        existingEmp.OA_Status = "Available";
                     }
                     if (!string.IsNullOrWhiteSpace(row.Phone)) existingEmp.Phone = row.Phone.Trim();
                     if (!string.IsNullOrWhiteSpace(row.Title)) existingEmp.Title = row.Title.Trim();
@@ -335,8 +333,8 @@ public class ImportService : IImportService
                 JoinDate = row.JoinDate ?? now,
                 LeaveDate = row.LeaveDate,
                 QAD_Status = "Disable",
-                OA_Status = !string.IsNullOrWhiteSpace(row.Email) ? "Available" : "Disable",
-                Email_Status = !string.IsNullOrWhiteSpace(row.Email) ? "Available" : "Disable",
+                OA_Status = "Disable",
+                Email_Status = "Disable",
                 AD_Status = "Disable",
                 Status = "Active",
                 CreatedAt = now,
@@ -364,6 +362,11 @@ public class ImportService : IImportService
 
         // 1. Tải trước toàn bộ Assets và Employees
         var assets = await _context.Assets.ToListAsync();
+        // Đơn hàng giới hạn theo bộ phận đặt: OrderID -> DepartmentID
+        var orderDeptById = await _context.Orders
+            .Where(o => o.DepartmentID != null)
+            .ToDictionaryAsync(o => o.OrderID, o => o.DepartmentID!.Value);
+
         var assetByCode = new Dictionary<string, Asset>(StringComparer.OrdinalIgnoreCase);
         var assetBySn = new Dictionary<string, Asset>(StringComparer.OrdinalIgnoreCase);
         var assetByMaterial = new Dictionary<string, Asset>(StringComparer.OrdinalIgnoreCase);
@@ -394,6 +397,7 @@ public class ImportService : IImportService
         }
 
         var handoverHistories = new List<AssetHandoverHistory>();
+        var employeeHistories = new List<EmployeeHistory>();
         var now = DateTime.UtcNow;
 
         using var transaction = await _context.Database.BeginTransactionAsync();
@@ -456,6 +460,15 @@ public class ImportService : IImportService
                     else if (!string.IsNullOrEmpty(empName) && empByName.TryGetValue(empName, out var e2)) emp = e2;
                     else if (!string.IsNullOrEmpty(empName) && empByEnglish.TryGetValue(empName, out var e3)) emp = e3;
 
+                    if (emp != null && asset.OrderID.HasValue
+                        && orderDeptById.TryGetValue(asset.OrderID.Value, out var orderDeptId)
+                        && orderDeptId != emp.DepartmentID)
+                    {
+                        result.SkippedCount++;
+                        result.Errors.Add($"Dòng {i + 1}: Thiết bị '{asset.AssetCode}' thuộc đơn hàng của bộ phận khác, không thể cấp phát cho '{emp.FullName}'");
+                        continue;
+                    }
+
                     if (emp != null)
                     {
                         var fromHolderId = asset.CurrentHolderID;
@@ -476,6 +489,18 @@ public class ImportService : IImportService
                             ConditionStatus = "Hoạt động tốt",
                             Note = !string.IsNullOrWhiteSpace(item.Note) ? item.Note : "Cấp phát từ danh sách phân bổ",
                             CreatedBy = "Import Cấp Phát"
+                        });
+
+                        employeeHistories.Add(new EmployeeHistory
+                        {
+                            EmployeeID = emp.EmployeeID,
+                            ActionType = "AssetAssigned",
+                            Title = $"Cấp phát thiết bị {asset.AssetCode}",
+                            Description = $"Được cấp phát thiết bị {asset.AssetName} ({asset.AssetCode}) từ danh sách phân bổ. S/N: {asset.SerialNumber ?? "---"}",
+                            OldValue = asset.WarehouseLocation ?? "Kho IT",
+                            NewValue = $"{asset.AssetCode} ({asset.AssetName})",
+                            PerformedBy = "Import Cấp Phát",
+                            ActionDate = now
                         });
 
                         result.AssignedCount++;
@@ -499,6 +524,11 @@ public class ImportService : IImportService
             if (handoverHistories.Count > 0)
             {
                 _context.AssetHandoverHistories.AddRange(handoverHistories);
+            }
+
+            if (employeeHistories.Count > 0)
+            {
+                _context.EmployeeHistories.AddRange(employeeHistories);
             }
 
             await _context.SaveChangesAsync();
@@ -712,13 +742,6 @@ public class ImportService : IImportService
                 if (request.UpdateResignedStatus && (isLeft || (matchedEmp.LeaveDate.HasValue && matchedEmp.LeaveDate.Value <= now)))
                 {
                     matchedEmp.Status = "Resigned";
-                }
-
-                // QUY TẮC TOÀN HỆ THỐNG: Nếu nhân viên có Email => Tự động kích hoạt Email và OA (Available)
-                if (!string.IsNullOrWhiteSpace(matchedEmp.Email))
-                {
-                    matchedEmp.Email_Status = "Available";
-                    matchedEmp.OA_Status = "Available";
                 }
 
                 matchedEmp.UpdatedAt = now;

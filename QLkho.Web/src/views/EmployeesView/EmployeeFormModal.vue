@@ -82,10 +82,31 @@
             placeholder="example@company.com" 
             :disabled="isHR && isEdit && !isUpcomingJoin(form.joinDate)"
           />
-          <small class="field-hint" style="color: #10b981; font-size: 0.75rem;">
-            ✨ Điền email sẽ tự động kích hoạt tài khoản Email & OA (Available)
-          </small>
         </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">{{ $t('employees.table_manager') }}</label>
+        <select
+          class="form-control"
+          v-model="form.managerName"
+          :disabled="isHR && isEdit && !isUpcomingJoin(form.joinDate)"
+        >
+          <option value="">{{ $t('departments.unassigned') }}</option>
+          <option v-for="name in managerOptions" :key="name" :value="name">{{ name }}</option>
+        </select>
+        <span class="field-hint">{{ $t('employees.manager_hint') }}</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Account <span class="label-optional">(AD, vd: AP\username - tự điền vào biên bản bàn giao)</span></label>
+        <input
+          type="text"
+          class="form-control"
+          v-model="form.accountName"
+          placeholder="AP\"
+          :disabled="isHR && isEdit && !isUpcomingJoin(form.joinDate)"
+        />
       </div>
 
       <div class="modal-grid-2">
@@ -101,13 +122,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">{{ $t('employees.table_join_date') }} *</label>
-          <input 
-            type="date" 
-            class="form-control" 
-            v-model="form.joinDate" 
-            required 
-            :disabled="isHR && isEdit && !isUpcomingJoin(form.joinDate)"
-          />
+          <DateTextInput v-model="form.joinDate" required :disabled="isHR && isEdit && !isUpcomingJoin(form.joinDate)" />
           <div v-if="isUpcomingJoin(form.joinDate)" class="onboarding-input-hint">
             🚀 <strong>{{ $t('employees.tab_onboarding') }}:</strong> {{ $t('employees.days_remaining_join', { days: getDaysUntilJoin(form.joinDate) }) }}
           </div>
@@ -117,12 +132,11 @@
       <div class="modal-grid-2">
         <div class="form-group">
           <label class="form-label">{{ $t('employees.table_leave_date') }}</label>
-          <input 
-            type="date" 
-            class="form-control" 
-            v-model="form.leaveDate" 
-            :disabled="isHR && isEdit && !isUpcomingJoin(form.joinDate)"
-          />
+          <DateTextInput v-model="form.leaveDate" :disabled="isHR && isEdit && !isUpcomingJoin(form.joinDate)" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">{{ $t('employees.table_created_date') }}</label>
+          <DateTextInput v-model="form.createdAt" :disabled="isHR && isEdit && !isUpcomingJoin(form.joinDate)" />
         </div>
       </div>
 
@@ -178,6 +192,34 @@
             </select>
           </div>
         </div>
+        <div class="modal-grid-4" style="margin-top: 10px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.75rem;">MFA</label>
+            <select class="form-control form-control-sm" v-model="form.mfa_Status">
+              <option value="Available">Available</option>
+              <option value="Disable">Disable</option>
+              <option value="Deleted">Deleted</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.75rem;">EV Mailbox</label>
+            <select class="form-control form-control-sm" v-model="form.evMailbox_Status">
+              <option value="Available">Available</option>
+              <option value="Disable">Disable</option>
+              <option value="Deleted">Deleted</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.75rem;">Migrate</label>
+            <select class="form-control form-control-sm" v-model="form.migrate_Status">
+              <option value="Available">Available</option>
+              <option value="Disable">Disable</option>
+              <option value="Deleted">Deleted</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div :class="isEdit ? 'modal-actions-between' : 'modal-actions-right'" style="margin-top: 20px;">
@@ -211,7 +253,8 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
+import DateTextInput from '@/components/common/DateTextInput.vue'
+import { reactive, watch, computed } from 'vue'
 import Modal from '@/components/common/Modal.vue'
 
 const props = defineProps({
@@ -232,15 +275,21 @@ const form = reactive({
   englishName: '',
   departmentID: null,
   title: '',
+  managerName: '',
   email: '',
   phone: '',
+  accountName: 'AP\\',
   joinDate: '',
   leaveDate: '',
+  createdAt: '',
   status: 'Active',
   qaD_Status: 'Disable',
   oA_Status: 'Disable',
   email_Status: 'Disable',
-  aD_Status: 'Disable'
+  aD_Status: 'Disable',
+  mfa_Status: 'Disable',
+  evMailbox_Status: 'Disable',
+  migrate_Status: 'Disable'
 })
 
 const populateForm = () => {
@@ -252,15 +301,21 @@ const populateForm = () => {
     form.englishName = emp.englishName || ''
     form.departmentID = emp.departmentID || null
     form.title = emp.title || ''
+    form.managerName = emp.managerName || ''
     form.email = emp.email || ''
     form.phone = emp.phone || ''
+    form.accountName = emp.accountName || 'AP\\'
     form.joinDate = emp.joinDate ? emp.joinDate.split('T')[0] : ''
     form.leaveDate = emp.leaveDate ? emp.leaveDate.split('T')[0] : ''
+    form.createdAt = emp.createdAt ? emp.createdAt.split('T')[0] : ''
     form.status = emp.status || 'Active'
     form.qaD_Status = emp.qaD_Status || emp.qad_Status || emp.QAD_Status || 'Disable'
     form.oA_Status = emp.oA_Status || emp.oa_Status || emp.OA_Status || 'Disable'
     form.email_Status = emp.email_Status || emp.Email_Status || 'Disable'
     form.aD_Status = emp.aD_Status || emp.ad_Status || emp.AD_Status || 'Disable'
+    form.mfa_Status = emp.mfa_Status || 'Disable'
+    form.evMailbox_Status = emp.evMailbox_Status || 'Disable'
+    form.migrate_Status = emp.migrate_Status || 'Disable'
   } else if (props.isOpen && !props.isEdit) {
     form.employeeID = null
     form.employeeCode = ''
@@ -268,15 +323,21 @@ const populateForm = () => {
     form.englishName = ''
     form.departmentID = null
     form.title = ''
+    form.managerName = ''
     form.email = ''
     form.phone = ''
+    form.accountName = 'AP\\'
     form.joinDate = new Date().toISOString().split('T')[0]
     form.leaveDate = ''
+    form.createdAt = new Date().toISOString().split('T')[0]
     form.status = 'Active'
     form.qaD_Status = 'Disable'
     form.oA_Status = 'Disable'
     form.email_Status = 'Disable'
     form.aD_Status = 'Disable'
+    form.mfa_Status = 'Disable'
+    form.evMailbox_Status = 'Disable'
+    form.migrate_Status = 'Disable'
   }
 }
 
@@ -284,12 +345,22 @@ watch([() => props.isOpen, () => props.employee, () => props.isEdit], () => {
   populateForm()
 }, { immediate: true, deep: true })
 
-// QUY TẮC: Khi email được điền => Tự động kích hoạt tài khoản Email & OA (Available)
-watch(() => form.email, (newVal) => {
-  if (newVal && String(newVal).trim() !== '') {
-    form.email_Status = 'Available'
-    form.oA_Status = 'Available'
-  }
+const deptManager = (deptId) =>
+  props.departments.find(d => d.departmentID === deptId)?.managerName || ''
+
+const deptSubManagers = (deptId) =>
+  props.departments.find(d => d.departmentID === deptId)?.subManagers || []
+
+// Manager của phòng ban đang chọn (giữ lại giá trị hiện tại nếu khác)
+const managerOptions = computed(() => {
+  const names = [deptManager(form.departmentID), ...deptSubManagers(form.departmentID), form.managerName].filter(Boolean)
+  return [...new Set(names)]
+})
+
+// Đổi phòng ban -> tự gán trưởng bộ phận của phòng ban đó
+watch(() => form.departmentID, (id, oldId) => {
+  if (oldId === undefined || id === oldId) return
+  form.managerName = deptManager(id)
 })
 
 const getDaysUntilJoin = (joinDateStr) => {

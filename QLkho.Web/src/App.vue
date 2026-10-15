@@ -26,14 +26,21 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, watchEffect } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import Sidebar from '@/components/layout/Sidebar.vue'
 import Header from '@/components/layout/Header.vue'
 import ChatbotWidget from '@/components/chat/ChatbotWidget.vue'
+import { getCurrentUser } from '@/api/auth'
 
 const route = useRoute()
 const isLoginPage = computed(() => route.name === 'login' || route.path === '/login')
+
+// Viewer: chỉ xem, ẩn mọi nút thêm/sửa/xóa (xem rule .role-viewer trong main.css)
+watchEffect(() => {
+  void route.fullPath
+  document.body.classList.toggle('role-viewer', getCurrentUser()?.role === 'Viewer')
+})
 </script>
 
 <style>

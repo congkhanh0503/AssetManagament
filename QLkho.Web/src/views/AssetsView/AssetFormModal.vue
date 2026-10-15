@@ -15,7 +15,7 @@
             <line x1="8" y1="21" x2="16" y2="21"></line>
             <line x1="12" y1="17" x2="12" y2="21"></line>
           </svg>
-          1. THÔNG TIN {{ isKeyboard ? 'BÀN PHÍM' : 'CHUỘT' }} {{ isEdit ? '' : 'NHẬP KHO' }}
+          1. THÔNG TIN {{ itemLabel.toUpperCase() }} {{ isEdit ? '' : 'NHẬP KHO' }}
         </div>
 
         <!-- Banner Tự Động Gom Vào Lô Chuột Hiện Có (Khi tạo mới) -->
@@ -72,7 +72,7 @@
 
         <div class="modal-grid-2">
           <div class="form-group">
-            <label class="form-label">Tên {{ isKeyboard ? 'Bàn Phím' : 'Chuột' }} / Model *</label>
+            <label class="form-label">Tên {{ itemLabel }} / Model *</label>
             <input 
               type="text" 
               class="form-control" 
@@ -353,12 +353,12 @@
         <div class="modal-grid-2">
           <div class="form-group">
             <label class="form-label">Ngày Mua</label>
-            <input type="date" class="form-control" v-model="form.purchaseDate" />
+            <DateTextInput v-model="form.purchaseDate" />
           </div>
 
           <div class="form-group">
             <label class="form-label">Hạn Bảo Hành</label>
-            <input type="date" class="form-control" v-model="form.warrantyExpireDate" />
+            <DateTextInput v-model="form.warrantyExpireDate" />
           </div>
         </div>
       </div>
@@ -381,6 +381,7 @@
 </template>
 
 <script setup>
+import DateTextInput from '@/components/common/DateTextInput.vue'
 import { computed } from 'vue'
 import Modal from '@/components/common/Modal.vue'
 
@@ -441,7 +442,9 @@ const isKeyboard = computed(() => {
   return catName.includes('bàn phím') || catName.includes('keyboard') || name.includes('bàn phím') || name.includes('keyboard')
 })
 
-const isMouseOrKeyboard = computed(() => isMouse.value || isKeyboard.value)
+const isOtherDevice = computed(() => (currentCategory.value?.categoryName || '').toLowerCase().includes('thiết bị khác'))
+const isMouseOrKeyboard = computed(() => isMouse.value || isKeyboard.value || isOtherDevice.value)
+const itemLabel = computed(() => isKeyboard.value ? 'Bàn phím' : (isMouse.value ? 'Chuột' : 'Thiết bị khác'))
 
 const isComputer = computed(() => {
   const catName = (currentCategory.value?.categoryName || '').toLowerCase()

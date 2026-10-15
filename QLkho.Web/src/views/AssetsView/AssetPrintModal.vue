@@ -81,7 +81,7 @@
                   <td class="h-lbl">Mouse</td>
                   <td class="h-val font-bold">{{ isWithMouse ? '1' : 'N/A' }}</td>
                   <td class="h-lbl">Bag</td>
-                  <td class="h-val font-bold">1</td>
+                  <td class="h-val font-bold">{{ hasBag ? '1' : 'N/A' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -264,7 +264,7 @@
     </div>
 
     <div class="modal-actions-right no-print" style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
-      <div v-if="isPrintingComputer" class="action-toggle-group">
+      <div v-if="isPrintingComputer" class="action-toggle-group" style="display: flex; gap: 8px;">
         <button 
           type="button" 
           class="btn-toggle-mouse" 
@@ -274,6 +274,16 @@
         >
           <span class="btn-toggle-icon">{{ isWithMouse ? '✅' : '⬜' }}</span>
           <span>Cấp Kèm Chuột: <strong>{{ isWithMouse ? 'Có (Mouse = 1)' : 'Không (Mouse = N/A)' }}</strong></span>
+        </button>
+        <button 
+          type="button" 
+          class="btn-toggle-mouse" 
+          :class="{ active: hasBag }"
+          @click="hasBag = !hasBag"
+          title="Bấm để bật/tắt cấp kèm bag"
+        >
+          <span class="btn-toggle-icon">{{ hasBag ? '✅' : '⬜' }}</span>
+          <span>Cấp Kèm Bag: <strong>{{ hasBag ? 'Có (Bag = 1)' : 'Không (Bag = N/A)' }}</strong></span>
         </button>
       </div>
       <div style="display: flex; gap: 8px; margin-left: auto;">
@@ -318,6 +328,7 @@ const props = defineProps({
 defineEmits(['close'])
 
 const isWithMouse = ref(false)
+const hasBag = ref(true)
 const accountInfo = ref('')
 const passwordInfo = ref('@9e7w9qS@KTF')
 const qrCodeDataUrl = ref('')
@@ -367,9 +378,9 @@ watch(() => props.asset, (newAsset) => {
     const noteStr = (newAsset.note || '').toLowerCase()
     isWithMouse.value = Boolean(noteStr.includes('chuột') || noteStr.includes('mouse'))
 
-    if (newAsset.holderEmail && !accountInfo.value) {
-      accountInfo.value = newAsset.holderEmail.split('@')[0]
-    }
+    accountInfo.value = newAsset.holderAccount
+      || props.employees.find(e => e.employeeID === newAsset.currentHolderID)?.accountName
+      || 'AP\\'
     if (!passwordInfo.value) {
       passwordInfo.value = '@9e7w9qS@KTF'
     }

@@ -21,6 +21,7 @@ public class AssetService : IAssetService
         var query = _context.Assets
             .Include(a => a.Category)
             .Include(a => a.Supplier)
+            .Include(a => a.Order)
             .Include(a => a.CurrentHolder)
                 .ThenInclude(e => e!.Department)
             .AsNoTracking()
@@ -79,6 +80,7 @@ public class AssetService : IAssetService
         var a = await _context.Assets
             .Include(a => a.Category)
             .Include(a => a.Supplier)
+            .Include(a => a.Order)
             .Include(a => a.CurrentHolder)
                 .ThenInclude(e => e!.Department)
             .AsNoTracking()
@@ -156,12 +158,14 @@ public class AssetService : IAssetService
             SupplierID = baseDto.SupplierID,
             SupplierName = baseDto.SupplierName,
             Status = baseDto.Status,
+            OrderDepartmentID = baseDto.OrderDepartmentID,
             CurrentHolderID = baseDto.CurrentHolderID,
             HolderName = baseDto.HolderName,
             HolderCode = baseDto.HolderCode,
             HolderDepartment = baseDto.HolderDepartment,
             HolderDepartmentCode = baseDto.HolderDepartmentCode,
             HolderEmail = baseDto.HolderEmail,
+            HolderAccount = baseDto.HolderAccount,
             DynamicLocation = baseDto.DynamicLocation,
             WarehouseLocation = baseDto.WarehouseLocation,
             Note = baseDto.Note,
@@ -262,6 +266,21 @@ public class AssetService : IAssetService
     }
 
     // Nghiệp vụ Cấp phát trọn gói (Bundle Assign) xử lý Database Transaction ACID
+    // Thiết bị thuộc đơn hàng do bộ phận khác đặt chỉ được cấp phát/điều chuyển cho nhân sự của bộ phận đó
+    private async Task EnsureOrderDepartmentAllowedAsync(Asset asset, Employee toEmployee)
+    {
+        var orderDeptId = asset.Order?.DepartmentID;
+        if (!orderDeptId.HasValue || orderDeptId.Value == toEmployee.DepartmentID) return;
+
+        var deptName = await _context.Departments
+            .Where(d => d.DepartmentID == orderDeptId.Value)
+            .Select(d => d.DepartmentName)
+            .FirstOrDefaultAsync() ?? $"#{orderDeptId.Value}";
+
+        throw new InvalidOperationException(
+            $"Thiết bị {asset.AssetCode} thuộc đơn hàng {asset.OrderCode} do bộ phận {deptName} đặt, chỉ được cấp phát cho nhân sự bộ phận này.");
+    }
+
     public async Task<bool> BundleAssignAsync(BundleAssignDto dto)
     {
         var toEmployee = await _context.Employees
@@ -275,13 +294,19 @@ public class AssetService : IAssetService
         if (dto.MonitorAssetID.HasValue && dto.MonitorAssetID.Value > 0) assetIdsToAssign.Add(dto.MonitorAssetID.Value);
         if (dto.KeyboardAssetID.HasValue && dto.KeyboardAssetID.Value > 0) assetIdsToAssign.Add(dto.KeyboardAssetID.Value);
         if (dto.MouseAssetID.HasValue && dto.MouseAssetID.Value > 0) assetIdsToAssign.Add(dto.MouseAssetID.Value);
+        if (dto.ExtraAssetIDs != null) assetIdsToAssign.AddRange(dto.ExtraAssetIDs.Where(id => id > 0));
+        assetIdsToAssign = assetIdsToAssign.Distinct().ToList();
 
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
             var assets = await _context.Assets
+                .Include(a => a.Order)
                 .Where(a => assetIdsToAssign.Contains(a.AssetID))
                 .ToListAsync();
+
+            foreach (var restricted in assets)
+                await EnsureOrderDepartmentAllowedAsync(restricted, toEmployee);
 
             var now = DateTime.UtcNow;
             var toLocation = toEmployee.Department != null ? toEmployee.Department.DepartmentName : "Văn phòng làm việc";
@@ -294,6 +319,28 @@ public class AssetService : IAssetService
                 a.Status = "In-Use";
                 a.CurrentHolderID = toEmployee.EmployeeID;
                 a.UpdatedAt = now;
+
+                // Tự động cập nhật thông tin Account theo nhân viên được cấp
+                string newAccount = GetDefaultAccountForEmployee(toEmployee);
+                if (!string.IsNullOrWhiteSpace(newAccount))
+                {
+                    if (string.IsNullOrWhiteSpace(a.Note))
+                    {
+                        a.Note = $"Account: {newAccount}";
+                    }
+                    else if (System.Text.RegularExpressions.Regex.IsMatch(a.Note, @"Account:\s*[^\s\|]+", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                    {
+                        a.Note = System.Text.RegularExpressions.Regex.Replace(
+                            a.Note,
+                            @"Account:\s*[^\s\|]+",
+                            $"Account: {newAccount}",
+                            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    }
+                    else
+                    {
+                        a.Note = $"{a.Note.Trim()} | Account: {newAccount}";
+                    }
+                }
 
                 var history = new AssetHandoverHistory
                 {
@@ -309,6 +356,19 @@ public class AssetService : IAssetService
                     CreatedBy = dto.CreatedBy ?? "Admin"
                 };
                 _context.AssetHandoverHistories.Add(history);
+
+                // Đồng bộ ghi nhận vào Lịch Sử Biến Động Nhân Sự (EmployeeHistories)
+                _context.EmployeeHistories.Add(new EmployeeHistory
+                {
+                    EmployeeID = toEmployee.EmployeeID,
+                    ActionType = "AssetAssigned",
+                    Title = $"Cấp phát thiết bị {a.AssetCode}",
+                    Description = $"Được cấp phát thiết bị {a.AssetName} ({a.AssetCode}) - S/N: {a.SerialNumber ?? "---"} | Tình trạng: {dto.ConditionStatus ?? "Hoạt động tốt"}",
+                    OldValue = fromLoc,
+                    NewValue = $"{a.AssetCode} ({a.AssetName})",
+                    PerformedBy = dto.CreatedBy ?? "Admin",
+                    ActionDate = now
+                });
             }
 
             await _context.SaveChangesAsync();
@@ -336,19 +396,49 @@ public class AssetService : IAssetService
 
     public async Task<bool> TransferAssetAsync(TransferAssetDto dto)
     {
-        var asset = await _context.Assets.FindAsync(dto.AssetID);
+        var asset = await _context.Assets.Include(a => a.Order).FirstOrDefaultAsync(a => a.AssetID == dto.AssetID);
         if (asset == null) throw new KeyNotFoundException("Không tìm thấy thiết bị");
 
         var toEmployee = await _context.Employees.Include(e => e.Department).FirstOrDefaultAsync(e => e.EmployeeID == dto.ToEmployeeID);
         if (toEmployee == null) throw new KeyNotFoundException("Không tìm thấy nhân viên mới");
 
+        await EnsureOrderDepartmentAllowedAsync(asset, toEmployee);
+
         var now = DateTime.UtcNow;
         var fromEmployeeId = asset.CurrentHolderID;
+        var fromEmployee = fromEmployeeId.HasValue 
+            ? await _context.Employees.Include(e => e.Department).FirstOrDefaultAsync(e => e.EmployeeID == fromEmployeeId.Value) 
+            : null;
         var toLocation = toEmployee.Department != null ? toEmployee.Department.DepartmentName : "Văn phòng";
 
         asset.CurrentHolderID = toEmployee.EmployeeID;
         asset.Status = "In-Use";
         asset.UpdatedAt = now;
+
+        // Tự động cập nhật thông tin Account trong Note của thiết bị theo chủ sở hữu mới
+        string newAccount = !string.IsNullOrWhiteSpace(dto.NewAccount) 
+            ? dto.NewAccount.Trim() 
+            : GetDefaultAccountForEmployee(toEmployee);
+
+        if (!string.IsNullOrWhiteSpace(newAccount))
+        {
+            if (string.IsNullOrWhiteSpace(asset.Note))
+            {
+                asset.Note = $"Account: {newAccount}";
+            }
+            else if (System.Text.RegularExpressions.Regex.IsMatch(asset.Note, @"Account:\s*[^\s\|]+", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                asset.Note = System.Text.RegularExpressions.Regex.Replace(
+                    asset.Note, 
+                    @"Account:\s*[^\s\|]+", 
+                    $"Account: {newAccount}", 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            }
+            else
+            {
+                asset.Note = $"{asset.Note.Trim()} | Account: {newAccount}";
+            }
+        }
 
         _context.AssetHandoverHistories.Add(new AssetHandoverHistory
         {
@@ -356,13 +446,42 @@ public class AssetService : IAssetService
             ActionType = "Transfer",
             FromEmployeeID = fromEmployeeId,
             ToEmployeeID = toEmployee.EmployeeID,
-            FromLocation = "Người dùng cũ",
+            FromLocation = fromEmployee != null ? $"Đang dùng ({fromEmployee.FullName})" : "Người dùng cũ",
             ToLocation = toLocation,
             ActionDate = now,
             ConditionStatus = dto.ConditionStatus ?? "Hoạt động bình thường",
             Note = dto.Note ?? "Điều chuyển thiết bị",
             CreatedBy = dto.CreatedBy ?? "Admin"
         });
+
+        // 1. Ghi nhận biến động cho người tiếp nhận
+        _context.EmployeeHistories.Add(new EmployeeHistory
+        {
+            EmployeeID = toEmployee.EmployeeID,
+            ActionType = "AssetTransferred",
+            Title = $"Tiếp nhận điều chuyển {asset.AssetCode}",
+            Description = $"Tiếp nhận thiết bị {asset.AssetName} ({asset.AssetCode}) từ {(fromEmployee != null ? $"{fromEmployee.FullName} ({fromEmployee.EmployeeCode})" : "người dùng cũ")}. Tình trạng: {dto.ConditionStatus ?? "Hoạt động bình thường"}",
+            OldValue = fromEmployee != null ? $"{fromEmployee.FullName} ({fromEmployee.EmployeeCode})" : "Chưa có chủ",
+            NewValue = $"{toEmployee.FullName} ({toEmployee.EmployeeCode})",
+            PerformedBy = dto.CreatedBy ?? "Admin",
+            ActionDate = now
+        });
+
+        // 2. Ghi nhận biến động cho người bàn giao cũ (nếu có)
+        if (fromEmployee != null)
+        {
+            _context.EmployeeHistories.Add(new EmployeeHistory
+            {
+                EmployeeID = fromEmployee.EmployeeID,
+                ActionType = "AssetTransferred",
+                Title = $"Bàn giao điều chuyển {asset.AssetCode}",
+                Description = $"Bàn giao thiết bị {asset.AssetName} ({asset.AssetCode}) sang cho {toEmployee.FullName} ({toEmployee.EmployeeCode})",
+                OldValue = $"{fromEmployee.FullName} ({fromEmployee.EmployeeCode})",
+                NewValue = $"{toEmployee.FullName} ({toEmployee.EmployeeCode})",
+                PerformedBy = dto.CreatedBy ?? "Admin",
+                ActionDate = now
+            });
+        }
 
         await _context.SaveChangesAsync();
         return true;
@@ -394,6 +513,22 @@ public class AssetService : IAssetService
             Note = dto.Note,
             CreatedBy = dto.CreatedBy ?? "Admin"
         });
+
+        // Ghi nhận biến động cho người trả thiết bị
+        if (fromHolderId.HasValue)
+        {
+            _context.EmployeeHistories.Add(new EmployeeHistory
+            {
+                EmployeeID = fromHolderId.Value,
+                ActionType = "AssetReturned",
+                Title = $"Thu hồi thiết bị {asset.AssetCode}",
+                Description = $"Đã thu hồi thiết bị {asset.AssetName} ({asset.AssetCode}) về kho ({asset.WarehouseLocation}). Tình trạng: {dto.ConditionStatus ?? "Đã thu hồi về kho"}",
+                OldValue = "Đang sử dụng",
+                NewValue = $"Đã thu hồi ({asset.WarehouseLocation})",
+                PerformedBy = dto.CreatedBy ?? "Admin",
+                ActionDate = now
+            });
+        }
 
         await _context.SaveChangesAsync();
         return true;
@@ -467,6 +602,22 @@ public class AssetService : IAssetService
             CreatedBy = "Admin"
         });
 
+        // Ghi nhận biến động cho nhân sự sử dụng thiết bị gặp sự cố
+        if (fromHolder != null)
+        {
+            _context.EmployeeHistories.Add(new EmployeeHistory
+            {
+                EmployeeID = fromHolder.EmployeeID,
+                ActionType = isMaintenance ? "AssetMaintenance" : "AssetBroken",
+                Title = isMaintenance ? $"Báo bảo trì thiết bị {asset.AssetCode}" : $"Báo hỏng thiết bị {asset.AssetCode}",
+                Description = $"{condStatus}. Thiết bị được chuyển về {asset.WarehouseLocation}",
+                OldValue = "Đang sử dụng",
+                NewValue = isMaintenance ? "Đang bảo trì" : "Báo hỏng",
+                PerformedBy = "Admin",
+                ActionDate = now
+            });
+        }
+
         await _context.SaveChangesAsync();
         return true;
     }
@@ -478,13 +629,14 @@ public class AssetService : IAssetService
         var catName = cat?.CategoryName?.ToLower() ?? "";
         var isKb = catName.ContainsAny("bàn phím", "keyboard");
         var isMouse = catName.ContainsAny("chuột", "mouse");
+        var isOther = !isKb && !isMouse && catName.Contains("thiết bị khác");
 
         var brandClean = (dto.Brand ?? "GEN").Trim();
         var brandCode = Regex.Replace(brandClean, "[^a-zA-Z0-9]", "").ToUpper();
         if (brandCode.Length > 5) brandCode = brandCode.Substring(0, 5);
         if (string.IsNullOrEmpty(brandCode)) brandCode = "GEN";
 
-        var prefix = isKb ? $"KB-{brandCode}" : $"MOU-{brandCode}";
+        var prefix = isKb ? $"KB-{brandCode}" : (isOther ? $"OTH-{brandCode}" : $"MOU-{brandCode}");
 
         // Tìm số thứ tự lớn nhất hiện tại
         var existingCodes = await _context.Assets
@@ -511,7 +663,7 @@ public class AssetService : IAssetService
             var assetCode = $"{prefix}-{nextNum:D2}";
             var assetName = !string.IsNullOrWhiteSpace(dto.AssetName)
                 ? dto.AssetName
-                : (isKb ? $"Bàn phím {brandClean}" : $"Chuột {brandClean}");
+                : (isKb ? $"Bàn phím {brandClean}" : (isOther ? $"Thiết bị khác {brandClean}" : $"Chuột {brandClean}"));
 
             var a = new Asset
             {
@@ -521,7 +673,7 @@ public class AssetService : IAssetService
                 Brand = brandClean,
                 SerialNumber = assetCode,
                 MaterialCode = prefix,
-                Specifications = isKb ? $"Bàn phím {brandClean} chuẩn văn phòng" : $"Chuột quang {brandClean} văn phòng",
+                Specifications = isKb ? $"Bàn phím {brandClean} chuẩn văn phòng" : (isOther ? null : $"Chuột quang {brandClean} văn phòng"),
                 Note = dto.Note ?? "Nhập theo lô phụ kiện",
                 SupplierID = dto.SupplierID,
                 WarehouseLocation = dto.WarehouseLocation?.Trim() ?? (isKb ? "Kho IT - Kệ Bàn Phím" : "Kho IT - Kệ Phụ Kiện"),
@@ -594,12 +746,12 @@ public class AssetService : IAssetService
             var p = filter.Period.Trim().ToLower();
             if (p == "week" || p == "this_week")
             {
-                var startDate = now.Date.AddDays(-7);
+                var startDate = QLKho.Api.Helpers.DateRangeHelper.StartOfCurrentWeekUtc();
                 query = query.Where(h => h.ActionDate >= startDate);
             }
             else if (p == "month" || p == "this_month")
             {
-                var startDate = now.Date.AddDays(-30);
+                var startDate = QLKho.Api.Helpers.DateRangeHelper.StartOfCurrentMonthUtc();
                 query = query.Where(h => h.ActionDate >= startDate);
             }
             else if (p == "last_month")
@@ -838,6 +990,11 @@ public class AssetService : IAssetService
             isAccessory = true;
             canBulkPrint = true;
         }
+        else if (catName.Contains("thiết bị khác") || assetCode.StartsWith("oth-"))
+        {
+            isAccessory = true;
+            canBulkPrint = true;
+        }
         else if (catName.ContainsAny("máy in", "printer") || catCode == "printer")
         {
             assetType = "Printer";
@@ -863,12 +1020,15 @@ public class AssetService : IAssetService
             SupplierID = a.SupplierID,
             SupplierName = a.Supplier != null ? a.Supplier.SupplierName : null,
             Status = a.Status,
+            OrderDepartmentID = a.Order?.DepartmentID,
             CurrentHolderID = a.CurrentHolderID,
             HolderName = a.CurrentHolder != null ? a.CurrentHolder.FullName : null,
             HolderCode = a.CurrentHolder != null ? a.CurrentHolder.EmployeeCode : null,
             HolderDepartment = a.CurrentHolder != null && a.CurrentHolder.Department != null ? a.CurrentHolder.Department.DepartmentName : null,
             HolderDepartmentCode = a.CurrentHolder != null && a.CurrentHolder.Department != null ? a.CurrentHolder.Department.DepartmentCode : null,
+            DepartmentID = a.CurrentHolder != null ? a.CurrentHolder.DepartmentID : null,
             HolderEmail = a.CurrentHolder != null ? a.CurrentHolder.Email : null,
+            HolderAccount = a.CurrentHolder != null ? a.CurrentHolder.AccountName : null,
             DynamicLocation = dynamicLoc,
             WarehouseLocation = a.WarehouseLocation,
             Note = a.Note,
@@ -893,6 +1053,24 @@ public class AssetService : IAssetService
             "maintenance" => "Bảo Trì / Sửa Chữa",
             _ => actionType
         };
+    }
+
+    private static string GetDefaultAccountForEmployee(Employee emp)
+    {
+        if (!string.IsNullOrWhiteSpace(emp.Email))
+        {
+            var prefix = emp.Email.Split('@')[0].Trim();
+            return $"AP\\{prefix}";
+        }
+        if (!string.IsNullOrWhiteSpace(emp.EnglishName))
+        {
+            return $"AP\\{emp.EnglishName.Trim()}";
+        }
+        if (!string.IsNullOrWhiteSpace(emp.EmployeeCode))
+        {
+            return $"AP\\{emp.EmployeeCode.Trim()}";
+        }
+        return string.Empty;
     }
 
     #endregion

@@ -90,15 +90,22 @@ defineEmits(['close'])
 const getHistoryIcon = (type) => {
   switch (type) {
     case 'StartedWorking': return '💼'
-    case 'OnboardingCreated': return '🚀'
+    case 'OnboardingCreated':
+    case 'Create': return '🚀'
     case 'UrgentMarked': return '🚨'
     case 'UrgentUnmarked': return '✕'
     case 'AssetAssigned': return '📦'
     case 'AssetReturned': return '📥'
     case 'AssetTransferred': return '🔄'
-    case 'AccountUpdated': return '🔑'
+    case 'AssetBroken': return '🛠️'
+    case 'AssetMaintenance': return '⚙️'
+    case 'HandoverUploaded':
+    case 'UploadPDF': return '📑'
+    case 'AccountUpdated':
+    case 'UpdateAccounts': return '🔑'
     case 'ProfileUpdated': return '✏️'
     case 'Resigned': return '📁'
+    case 'ImportAccounts': return '📋'
     default: return '🕒'
   }
 }
@@ -106,15 +113,22 @@ const getHistoryIcon = (type) => {
 const getHistoryTypeLabel = (type) => {
   switch (type) {
     case 'StartedWorking': return 'Chính Thức Đi Làm'
-    case 'OnboardingCreated': return 'Tạo Hồ Sơ Mới'
+    case 'OnboardingCreated':
+    case 'Create': return 'Tạo Hồ Sơ Mới'
     case 'UrgentMarked': return 'Báo Khẩn Cấp'
     case 'UrgentUnmarked': return 'Hủy Khẩn Cấp'
     case 'AssetAssigned': return 'Cấp Phát Thiết Bị'
     case 'AssetReturned': return 'Thu Hồi Thiết Bị'
     case 'AssetTransferred': return 'Điều Chuyển Thiết Bị'
-    case 'AccountUpdated': return 'Tài Khoản Hệ Thống'
+    case 'AssetBroken': return 'Báo Hỏng Thiết Bị'
+    case 'AssetMaintenance': return 'Bảo Trì Thiết Bị'
+    case 'HandoverUploaded':
+    case 'UploadPDF': return 'Tải Biên Bản PDF'
+    case 'AccountUpdated':
+    case 'UpdateAccounts': return 'Tài Khoản Hệ Thống'
     case 'ProfileUpdated': return 'Cập Nhật Hồ Sơ'
     case 'Resigned': return 'Đã Nghỉ Việc'
+    case 'ImportAccounts': return 'Đồng Bộ Tài Khoản Excel'
     default: return 'Sự Kiện Nhân Sự'
   }
 }

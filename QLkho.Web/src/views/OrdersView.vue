@@ -99,7 +99,7 @@
         <input 
           type="text" 
           v-model="searchKeyword" 
-          placeholder="Tìm theo Mã đơn, Tên đơn hàng, Tên dự án, Nhà cung cấp..." 
+          placeholder="Tìm theo Mã đơn, PR Code, Tên dự án, Nhà cung cấp..." 
         />
         <button v-if="searchKeyword" class="btn-clear" @click="searchKeyword = ''">✕</button>
       </div>
@@ -166,13 +166,13 @@
           <thead>
             <tr>
               <th style="width: 130px;">MÃ ĐƠN HÀNG</th>
-              <th style="width: 260px;">TÊN ĐƠN HÀNG</th>
+              <th style="width: 260px;">MÃ PR (PR CODE)</th>
               <th style="width: 170px;">DỰ ÁN</th>
               <th style="width: 130px;">NGÀY TẠO</th>
               <th style="width: 190px;">TIẾN ĐỘ NHẬN THIẾT BỊ</th>
               <th style="width: 165px;">KHO / ĐANG CẤP</th>
               <th style="width: 135px;">TRẠNG THÁI</th>
-              <th style="width: 170px; text-align: right;">THAO TÁC</th>
+              <th style="width: 140px; text-align: center;">THAO TÁC</th>
             </tr>
           </thead>
           <tbody>
@@ -183,12 +183,15 @@
               <td>
                 <div class="order-title-cell">
                   <div class="order-name-row">
-                    <strong class="order-name-text">{{ order.orderName }}</strong>
-                    <span v-if="order.prCode" class="pr-badge" :title="'Mã PR: ' + order.prCode">
+                    <strong class="order-name-text">
+                      {{ order.prCode || order.orderName || '--- (Không có PR)' }}
+                    </strong>
+                    <span v-if="order.prCode && order.orderName && order.orderName !== order.prCode" class="pr-badge" :title="'Mã PR: ' + order.prCode">
                       PR: {{ order.prCode }}
                     </span>
                   </div>
                   <div class="order-sub-meta">
+                    <span v-if="order.departmentName" class="sup-tag" :title="'Chỉ cấp phát cho bộ phận ' + order.departmentName">🏬 Đặt bởi: {{ order.departmentName }}</span>
                     <span v-if="order.supplierName" class="sup-tag">🏢 {{ order.supplierName }}</span>
                     <span class="type-tag">📦 {{ order.itemTypesCount }} loại thiết bị</span>
                   </div>
@@ -247,24 +250,80 @@
                   {{ getStatusText(order.status) }}
                 </span>
               </td>
-              <td style="text-align: right;">
-                <div class="row-actions">
+              <td style="text-align: center;">
+                <div class="action-dropdown-wrapper">
                   <button 
                     type="button" 
-                    class="btn-action-primary" 
-                    @click="openDetailModal(order.orderID)"
-                    title="Nhập thiết bị hoặc đối soát đơn"
+                    class="btn-action-dropdown-toggle" 
+                    :class="{ active: activeDropdownOrderId === order.orderID }"
+                    @click="toggleActionDropdown(order.orderID, $event)"
+                    title="Menu thao tác CRUD với đơn hàng này"
                   >
-                    🔍 Nhập / Quét Thiết Bị
+                    <span class="btn-action-icon">⚙️</span>
+                    <span class="btn-action-text">Thao tác</span>
+                    <span class="dropdown-chevron">▾</span>
                   </button>
-                  <button 
-                    type="button" 
-                    class="btn-action-danger" 
-                    @click="confirmDeleteOrder(order)"
-                    title="Xóa đơn hàng"
+
+                  <!-- Menu Dropdown chứa trọn vẹn 4 thao tác CRUD -->
+                  <div 
+                    v-if="activeDropdownOrderId === order.orderID" 
+                    class="action-dropdown-menu"
+                    @click.stop
                   >
-                    🗑️
-                  </button>
+                    <!-- 1. Xem chi tiết / Quét nhận thiết bị (R - Read) -->
+                    <button 
+                      type="button" 
+                      class="dropdown-item item-read" 
+                      @click="handleActionRead(order)"
+                    >
+                      <span class="item-icon">🔍</span>
+                      <div class="item-text-wrap">
+                        <span class="item-title">Xem Chi Tiết & Nhập Máy</span>
+                        <span class="item-desc">Đối soát số lượng, quét Serial</span>
+                      </div>
+                    </button>
+
+                    <!-- 2. Sửa thông tin đơn hàng (U - Update) -->
+                    <button 
+                      type="button" 
+                      class="dropdown-item item-update" 
+                      @click="handleActionUpdate(order)"
+                    >
+                      <span class="item-icon">✏️</span>
+                      <div class="item-text-wrap">
+                        <span class="item-title">Chỉnh Sửa Đơn Hàng</span>
+                        <span class="item-desc">Đổi mã PR, dự án, trạng thái...</span>
+                      </div>
+                    </button>
+
+                    <!-- 3. Thêm loại thiết bị cho đơn hàng này -->
+                    <button 
+                      type="button" 
+                      class="dropdown-item item-create" 
+                      @click="handleActionAddItem(order)"
+                    >
+                      <span class="item-icon">➕</span>
+                      <div class="item-text-wrap">
+                        <span class="item-title">Thêm Loại Thiết Bị</span>
+                        <span class="item-desc">Bổ sung thiết bị cho đơn này</span>
+                      </div>
+                    </button>
+
+                    <div class="dropdown-divider"></div>
+
+                    <!-- 4. Xóa đơn hàng này (D - Delete) -->
+                    <button 
+                      type="button" 
+                      class="dropdown-item item-delete" 
+                      @click="handleActionDelete(order)"
+                    >
+                      <span class="item-icon">🗑️</span>
+                      <div class="item-text-wrap">
+                        <span class="item-title text-danger">Xóa Đơn Hàng</span>
+                        <span class="item-desc">Gỡ bỏ đơn hàng khỏi hệ thống</span>
+                      </div>
+                    </button>
+                  </div>
                 </div>
               </td>
             </tr>
@@ -292,18 +351,7 @@
         <form @submit.prevent="submitCreateOrder" class="modal-body">
           <div class="form-grid-2">
             <div class="form-group">
-              <label class="form-label">Tên đơn hàng <span class="req">*</span></label>
-              <input 
-                type="text" 
-                class="form-control" 
-                v-model="createForm.orderName" 
-                required 
-                placeholder="VD: Đơn mua 50 Laptop HP EliteBook..." 
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Mã PR (PR CODE) <span class="badge-optional">Tùy chọn</span></label>
+              <label class="form-label">Mã PR (PR CODE) <span class="badge-optional">Tùy chọn (có thể để trống)</span></label>
               <input 
                 type="text" 
                 class="form-control" 
@@ -311,11 +359,17 @@
                 placeholder="VD: PR-2026-001 (để trống nếu không có)" 
               />
             </div>
-          </div>
-
-          <div class="form-grid-2">
             <div class="form-group">
-              <label class="form-label">Mã đơn hàng (PO Code)</label>
+              <label class="form-label">Bộ phận đặt hàng <span class="badge-optional">Tùy chọn</span></label>
+              <select class="form-control" v-model="createForm.departmentID">
+                <option :value="null">— Kho chung (cấp phát cho mọi bộ phận) —</option>
+                <option v-for="d in departmentsList" :key="d.departmentID" :value="d.departmentID">{{ d.departmentName }}</option>
+              </select>
+              <span class="field-hint-dept">Nếu đơn do bộ phận khác đặt, thiết bị chỉ được cấp phát cho nhân sự bộ phận đó.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Mã PO (PO Code)</label>
               <input 
                 type="text" 
                 class="form-control" 
@@ -323,16 +377,16 @@
                 placeholder="Tự động sinh (VD: PO-20261006-001)" 
               />
             </div>
+          </div>
 
-            <div class="form-group">
-              <label class="form-label">Nhà cung cấp</label>
-              <select class="form-control" v-model="createForm.supplierID" @change="onSupplierChange">
-                <option :value="null">-- Chọn nhà cung cấp (nếu có) --</option>
-                <option v-for="sup in suppliersList" :key="sup.supplierID" :value="sup.supplierID">
-                  {{ sup.supplierName }}
-                </option>
-              </select>
-            </div>
+          <div class="form-group" style="margin-top: 10px;">
+            <label class="form-label">Nhà cung cấp</label>
+            <select class="form-control" v-model="createForm.supplierID" @change="onSupplierChange">
+              <option :value="null">-- Chọn nhà cung cấp (nếu có) --</option>
+              <option v-for="sup in suppliersList" :key="sup.supplierID" :value="sup.supplierID">
+                {{ sup.supplierName }}
+              </option>
+            </select>
           </div>
 
           <!-- Có thuộc dự án nào không? -->
@@ -462,6 +516,124 @@
     </div>
 
     <!-- ======================================================== -->
+    <!-- MODAL CHỈNH SỬA ĐƠN HÀNG (CẬP NHẬT THÔNG TIN ĐƠN HÀNG)   -->
+    <!-- ======================================================== -->
+    <div v-if="isEditModalOpen" class="modal-backdrop" @click.self="isEditModalOpen = false">
+      <div class="glass-modal modal-large">
+        <div class="modal-header">
+          <div class="modal-title-box">
+            <div class="modal-icon orange">✏️</div>
+            <div>
+              <h2 class="modal-title">Chỉnh Sửa Đơn Hàng</h2>
+              <p class="modal-subtitle">Cập nhật thông tin mã PR, dự án, nhà cung cấp và trạng thái đơn hàng</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" @click="isEditModalOpen = false">✕</button>
+        </div>
+
+        <form @submit.prevent="submitUpdateOrder" class="modal-body">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label">Mã PR (PR CODE) <span class="badge-optional">Tùy chọn (có thể để trống)</span></label>
+              <input 
+                type="text" 
+                class="form-control" 
+                v-model="editForm.prCode" 
+                placeholder="VD: PR-2026-001 (để trống nếu không có)" 
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Bộ phận đặt hàng <span class="badge-optional">Tùy chọn</span></label>
+              <select class="form-control" v-model="editForm.departmentID">
+                <option :value="null">— Kho chung (cấp phát cho mọi bộ phận) —</option>
+                <option v-for="d in departmentsList" :key="d.departmentID" :value="d.departmentID">{{ d.departmentName }}</option>
+              </select>
+              <span class="field-hint-dept">Nếu đơn do bộ phận khác đặt, thiết bị chỉ được cấp phát cho nhân sự bộ phận đó.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Mã PO (PO Code)</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                v-model="editForm.orderCode" 
+                disabled 
+                style="background: #f1f5f9; cursor: not-allowed; font-weight: 700;"
+                title="Mã đơn hàng không thể chỉnh sửa" 
+              />
+            </div>
+          </div>
+
+          <div class="form-grid-2" style="margin-top: 10px;">
+            <div class="form-group">
+              <label class="form-label">Trạng thái đơn hàng</label>
+              <select class="form-control" v-model="editForm.status">
+                <option value="Pending">🕒 Chờ nhận hàng (Pending)</option>
+                <option value="Receiving">📥 Đang nhận hàng (Receiving)</option>
+                <option value="Partial">⚠️ Nhận một phần / Còn thiếu (Partial)</option>
+                <option value="Completed">✅ Đã hoàn tất (Completed)</option>
+                <option value="Cancelled">✕ Đã hủy đơn (Cancelled)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Nhà cung cấp</label>
+              <select class="form-control" v-model="editForm.supplierID" @change="onEditSupplierChange">
+                <option :value="null">-- Chọn nhà cung cấp (nếu có) --</option>
+                <option v-for="sup in suppliersList" :key="sup.supplierID" :value="sup.supplierID">
+                  {{ sup.supplierName }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Thuộc dự án nào không? -->
+          <div class="project-box" style="margin-top: 10px;">
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="editForm.isProjectBased" />
+              <span class="checkbox-text">Đơn hàng này thuộc Dự án cụ thể</span>
+            </label>
+            <div v-if="editForm.isProjectBased" class="project-input-wrap">
+              <label class="form-label">Tên dự án <span class="req">*</span></label>
+              <input 
+                type="text" 
+                class="form-control" 
+                v-model="editForm.projectName" 
+                required 
+                placeholder="VD: Dự án Smart Factory Q4, Dự án Setup Chi nhánh mới..." 
+              />
+            </div>
+          </div>
+
+          <div class="form-grid-2" style="margin-top: 10px;">
+            <div class="form-group">
+              <label class="form-label">Ngày giao hàng dự kiến</label>
+              <DateTextInput v-model="editForm.expectedDeliveryDate" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Ghi chú đơn hàng</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                v-model="editForm.note" 
+                placeholder="Ghi chú về tiến độ giao hàng, người phụ trách..." 
+              />
+            </div>
+          </div>
+
+          <div class="modal-footer" style="margin-top: 20px;">
+            <button type="button" class="btn btn-secondary" @click="isEditModalOpen = false">Hủy</button>
+            <button type="submit" class="btn btn-primary" :disabled="editSubmitting">
+              <span v-if="editSubmitting" class="spinner-mini"></span>
+              <span>💾 Lưu Thay Đổi</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
     <!-- MODAL BƯỚC 2: QUẢN LÝ & NHẬP THIẾT BỊ VÀO ĐƠN            -->
     <!-- (Đối soát số lượng, Cảnh báo thiếu, Quét Serial, Đồng bộ) -->
     <!-- ======================================================== -->
@@ -473,10 +645,7 @@
             <div>
               <div class="title-code-row">
                 <span class="code-badge order-badge">{{ currentOrder.orderCode }}</span>
-                <h2 class="modal-title">{{ currentOrder.orderName }}</h2>
-                <span v-if="currentOrder.prCode" class="pr-badge-large" title="Mã PR (Purchase Request)">
-                  PR: {{ currentOrder.prCode }}
-                </span>
+                <h2 class="modal-title">{{ currentOrder.prCode ? `Mã PR: ${currentOrder.prCode}` : (currentOrder.orderName || currentOrder.orderCode) }}</h2>
                 <span :class="getStatusBadgeClass(currentOrder.status)">
                   {{ getStatusText(currentOrder.status) }}
                 </span>
@@ -606,7 +775,19 @@
                   </select>
                 </div>
 
-                <div class="form-group">
+                <div v-if="isSingleQtyItem" class="form-group">
+                  <label class="form-label">Số lượng nhập (không cần S/N) <span class="req">*</span></label>
+                  <input 
+                    type="number" 
+                    class="form-control highlight-input" 
+                    v-model.number="singleDeviceForm.quantity" 
+                    min="1" 
+                    :max="singleRemaining"
+                    required 
+                  />
+                </div>
+
+                <div v-else class="form-group">
                   <label class="form-label">Serial Number (S/N) <span class="req">*</span></label>
                   <input 
                     type="text" 
@@ -619,7 +800,7 @@
                   />
                 </div>
 
-                <div class="form-group">
+                <div v-if="!isSingleQtyItem" class="form-group">
                   <label class="form-label">Mã tài sản (để trống tự sinh)</label>
                   <input 
                     type="text" 
@@ -677,7 +858,10 @@
           <div class="devices-list-section">
             <div class="list-title-row">
               <h4>Danh Sách Thiết Bị Đã Nhập Vào Đơn ({{ currentOrder.devices.length }} máy)</h4>
-              <span v-if="untransferredCount > 0" class="badge-pending-sync">
+              <span v-if="currentOrder.departmentID" class="badge-pending-sync" style="background: #eff6ff; color: #1d4ed8;">
+                🏬 Đơn của bộ phận {{ currentOrder.departmentName }} – không đồng bộ vào kho
+              </span>
+              <span v-else-if="untransferredCount > 0" class="badge-pending-sync">
                 ⚡ {{ untransferredCount }} máy chưa đồng bộ vào kho
               </span>
             </div>
@@ -728,6 +912,9 @@
                       <span v-if="dev.isTransferredToAsset" class="badge-synced">
                         ✅ Đã vào Kho Tài sản
                       </span>
+                      <span v-else-if="currentOrder.departmentID" class="badge-unsynced" style="background: #eff6ff; color: #1d4ed8;">
+                        🏬 Của bộ phận (không đồng bộ)
+                      </span>
                       <span v-else class="badge-unsynced">
                         ⏳ Chờ đồng bộ
                       </span>
@@ -747,6 +934,44 @@
               </table>
             </div>
           </div>
+        <!-- BIÊN BẢN BÀN GIAO CỦA ĐƠN BỘ PHẬN: IN + IMPORT LƯU TRỮ -->
+        <div v-if="currentOrder.departmentID" class="order-docs-section">
+          <div class="list-title-row">
+            <h4>📄 Biên Bản Bàn Giao Đã Lưu ({{ orderDocs.length }})</h4>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-secondary" @click="isPrintOpen = true" :disabled="!currentOrder.items?.length">
+                🖨️ In Biên Bản Bàn Giao
+              </button>
+              <button type="button" class="btn btn-primary" @click="orderDocInput?.click()" :disabled="uploadingDoc">
+                <span v-if="uploadingDoc" class="spinner-mini"></span>
+                <span>⬆️ Import Biên Bản</span>
+              </button>
+              <input ref="orderDocInput" type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" style="display: none;" @change="onOrderDocSelected" />
+            </div>
+          </div>
+          <div v-if="orderDocs.length === 0" class="empty-devices">Chưa có biên bản nào được import cho đơn hàng này.</div>
+          <table v-else class="sub-table">
+            <thead>
+              <tr>
+                <th>Tên tài liệu</th>
+                <th style="width: 110px;">Dung lượng</th>
+                <th style="width: 150px;">Ngày import</th>
+                <th style="width: 130px; text-align: center;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="doc in orderDocs" :key="doc.documentID">
+                <td>{{ doc.documentName }}</td>
+                <td>{{ doc.fileSizeFormatted }}</td>
+                <td>{{ formatDate(doc.createdAt) }}</td>
+                <td style="text-align: center;">
+                  <a :href="documentsApi.getDownloadUrl(doc.documentID)" target="_blank" class="btn btn-secondary" style="padding: 2px 8px;">Xem</a>
+                  <button type="button" class="btn-icon-del" @click="deleteOrderDoc(doc)" title="Xóa biên bản">✕</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         </div>
 
         <!-- FOOTER: NÚT ĐỒNG BỘ SANG QUẢN LÝ TÀI SẢN -->
@@ -757,6 +982,7 @@
 
           <div class="footer-sync-actions">
             <button 
+              v-if="!currentOrder.departmentID"
               type="button" 
               class="btn btn-success btn-sync-assets" 
               @click="syncOrderToAssets"
@@ -770,13 +996,236 @@
         </div>
       </div>
     </div>
+
+    <OrderDepartmentPrintModal
+      :is-open="isPrintOpen"
+      :order="currentOrder"
+      :departments="departmentsList"
+      @close="isPrintOpen = false"
+    />
+
+    <!-- ======================================================== -->
+    <!-- MODAL BƯỚC 3: SỬA ĐƠN HÀNG (Cập nhật thông tin - U in CRUD) -->
+    <!-- ======================================================== -->
+    <div v-if="isEditModalOpen" class="modal-backdrop" @click.self="isEditModalOpen = false">
+      <div class="glass-modal modal-md">
+        <div class="modal-header">
+          <div class="modal-title-box">
+            <div class="modal-icon blue">✏️</div>
+            <div>
+              <h2 class="modal-title">Chỉnh Sửa Đơn Hàng</h2>
+              <p class="modal-subtitle">Cập nhật thông tin đơn hàng {{ editForm.orderCode }}</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" @click="isEditModalOpen = false">✕</button>
+        </div>
+
+        <form @submit.prevent="submitUpdateOrder" class="modal-body">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label">Mã PR (PR Code) <span class="badge-optional">Tùy chọn</span></label>
+              <input 
+                type="text" 
+                class="form-control" 
+                v-model="editForm.prCode" 
+                placeholder="VD: PR-2026-001 (để trống nếu không có)"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Bộ phận đặt hàng <span class="badge-optional">Tùy chọn</span></label>
+              <select class="form-control" v-model="editForm.departmentID">
+                <option :value="null">— Kho chung (cấp phát cho mọi bộ phận) —</option>
+                <option v-for="d in departmentsList" :key="d.departmentID" :value="d.departmentID">{{ d.departmentName }}</option>
+              </select>
+              <span class="field-hint-dept">Nếu đơn do bộ phận khác đặt, thiết bị chỉ được cấp phát cho nhân sự bộ phận đó.</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Trạng thái đơn hàng</label>
+              <select class="form-control" v-model="editForm.status">
+                <option value="Pending">Chờ nhận (Pending)</option>
+                <option value="Receiving">Đang nhận (Receiving)</option>
+                <option value="Partial">Nhận một phần (Partial)</option>
+                <option value="Completed">Đã hoàn tất (Completed)</option>
+                <option value="Cancelled">Đã hủy (Cancelled)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-2" style="margin-top: 10px;">
+            <div class="form-group">
+              <label class="form-label">Nhà cung cấp</label>
+              <select class="form-control" v-model="editForm.supplierID" @change="onEditSupplierChange">
+                <option :value="null">-- Chọn nhà cung cấp (nếu có) --</option>
+                <option v-for="sup in suppliersList" :key="sup.supplierID" :value="sup.supplierID">
+                  {{ sup.supplierName }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ngày giao dự kiến</label>
+              <DateTextInput v-model="editForm.expectedDeliveryDate" />
+            </div>
+          </div>
+
+          <!-- Thuộc dự án -->
+          <div class="project-box" style="margin-top: 12px;">
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="editForm.isProjectBased" />
+              <span class="checkbox-text">Đơn hàng này thuộc Dự án cụ thể</span>
+            </label>
+            <div v-if="editForm.isProjectBased" class="project-input-wrap">
+              <label class="form-label">Tên dự án <span class="req">*</span></label>
+              <input 
+                type="text" 
+                class="form-control" 
+                v-model="editForm.projectName" 
+                required 
+                placeholder="VD: Dự án Smart Factory Q4..." 
+              />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label class="form-label">Ghi chú đơn hàng</label>
+            <textarea 
+              class="form-control" 
+              rows="3" 
+              v-model="editForm.note" 
+              placeholder="Ghi chú về tiến độ, lý do chỉnh sửa..."
+            ></textarea>
+          </div>
+
+          <div class="modal-footer" style="padding: 16px 0 0 0; margin-top: 16px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn btn-secondary" @click="isEditModalOpen = false">Hủy</button>
+            <button type="submit" class="btn btn-primary" :disabled="editSubmitting">
+              <span v-if="editSubmitting" class="spinner-mini"></span>
+              <span>Lưu Thay Đổi</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- MODAL THÊM LOẠI THIẾT BỊ CHO ĐƠN HÀNG (Add Item to Order) -->
+    <!-- ======================================================== -->
+    <div v-if="isAddItemModalOpen" class="modal-backdrop" @click.self="isAddItemModalOpen = false">
+      <div class="glass-modal modal-md">
+        <div class="modal-header">
+          <div class="modal-title-box">
+            <div class="modal-icon green">➕</div>
+            <div>
+              <h2 class="modal-title">Thêm Loại Thiết Bị Vào Đơn Hàng</h2>
+              <p class="modal-subtitle">
+                Đơn hàng: <strong>{{ targetOrderForAddItem?.orderCode }}</strong>
+                <span v-if="targetOrderForAddItem?.prCode"> (PR: {{ targetOrderForAddItem?.prCode }})</span>
+              </p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" @click="isAddItemModalOpen = false">✕</button>
+        </div>
+
+        <form @submit.prevent="submitAddItem" class="modal-body">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label">Phân loại thiết bị <span class="req">*</span></label>
+              <select class="form-control" v-model="addItemForm.categoryID" required>
+                <option :value="null">-- Chọn phân loại --</option>
+                <option v-for="cat in categoriesList" :key="cat.categoryID" :value="cat.categoryID">
+                  {{ cat.categoryName }}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Số lượng dự kiến mua <span class="req">*</span></label>
+              <input 
+                type="number" 
+                class="form-control" 
+                v-model.number="addItemForm.expectedQuantity" 
+                min="1" 
+                required 
+                placeholder="VD: 5" 
+              />
+            </div>
+          </div>
+
+          <div class="form-grid-2" style="margin-top: 10px;">
+            <div class="form-group">
+              <label class="form-label">Tên Model thiết bị <span class="req">*</span></label>
+              <input 
+                type="text" 
+                class="form-control" 
+                v-model="addItemForm.modelName" 
+                required 
+                placeholder="VD: Lenovo ThinkPad T14 Gen 4, Dell P2422H..." 
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Hãng sản xuất</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                v-model="addItemForm.brand" 
+                placeholder="VD: Lenovo, Dell, HP, Apple..." 
+              />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label class="form-label">Cấu hình / Thông số kỹ thuật</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              v-model="addItemForm.specifications" 
+              placeholder="VD: Core i7-1355U, 16GB RAM, 512GB SSD, 14 inch FHD..." 
+            />
+          </div>
+
+          <div class="form-grid-2" style="margin-top: 10px;">
+            <div class="form-group">
+              <label class="form-label">Đơn giá dự kiến (VNĐ / máy)</label>
+              <input 
+                type="number" 
+                class="form-control" 
+                v-model.number="addItemForm.unitPrice" 
+                placeholder="VD: 25000000" 
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Ghi chú dòng thiết bị</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                v-model="addItemForm.note" 
+                placeholder="Ghi chú thêm về chủng loại..." 
+              />
+            </div>
+          </div>
+
+          <div class="modal-footer" style="padding: 16px 0 0 0; margin-top: 16px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn btn-secondary" @click="isAddItemModalOpen = false">Hủy</button>
+            <button type="submit" class="btn btn-success" :disabled="addItemSubmitting">
+              <span v-if="addItemSubmitting" class="spinner-mini"></span>
+              <span v-else>➕</span>
+              <span>Thêm Vào Đơn Hàng</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import DateTextInput from '@/components/common/DateTextInput.vue'
+import OrderDepartmentPrintModal from './OrdersView/OrderDepartmentPrintModal.vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { ordersApi, categoriesApi, suppliersApi } from '@/api/client'
+import { ordersApi, categoriesApi, suppliersApi, departmentsApi, documentsApi } from '@/api/client'
+import { isQuantityAsset } from '@/utils/assetKind'
 
 const router = useRouter()
 
@@ -786,11 +1235,15 @@ const loading = ref(false)
 const searchKeyword = ref('')
 const currentStatusFilter = ref('ALL')
 
+// Dropdown thao tác CRUD gom 4 nút thành 1
+const activeDropdownOrderId = ref(null)
+
 // Dữ liệu danh mục & nhà cung cấp
 const categoriesList = ref([])
 const suppliersList = ref([])
+const departmentsList = ref([])
 
-// State Modal Bước 1 (Tạo đơn)
+// State Modal Bước 1 (Tạo đơn - C in CRUD)
 const isCreateModalOpen = ref(false)
 const submitting = ref(false)
 const createForm = reactive({
@@ -799,15 +1252,97 @@ const createForm = reactive({
   orderCode: '',
   isProjectBased: false,
   projectName: '',
+  departmentID: null,
   supplierID: null,
   supplierName: '',
   note: '',
   items: []
 })
 
-// State Modal Bước 2 (Chi tiết & Quét thiết bị)
+// State Modal Sửa đơn hàng (Update - U in CRUD)
+const isEditModalOpen = ref(false)
+const editSubmitting = ref(false)
+const editForm = reactive({
+  orderID: null,
+  orderCode: '',
+  orderName: '',
+  prCode: '',
+  isProjectBased: false,
+  projectName: '',
+  departmentID: null,
+  supplierID: null,
+  supplierName: '',
+  expectedDeliveryDate: '',
+  status: 'Pending',
+  note: ''
+})
+
+// State Modal Thêm Loại Thiết Bị Cho Đơn Hàng (Add Item)
+const isAddItemModalOpen = ref(false)
+const addItemSubmitting = ref(false)
+const targetOrderForAddItem = ref(null)
+const addItemForm = reactive({
+  categoryID: null,
+  modelName: '',
+  brand: '',
+  specifications: '',
+  expectedQuantity: 1,
+  unitPrice: null,
+  note: ''
+})
+
+// State Modal Bước 2 (Chi tiết & Quét thiết bị - R in CRUD)
 const isDetailModalOpen = ref(false)
 const currentOrder = ref(null)
+
+// Biên bản bàn giao của đơn hàng bộ phận
+const isPrintOpen = ref(false)
+const orderDocs = ref([])
+const uploadingDoc = ref(false)
+const orderDocInput = ref(null)
+
+const loadOrderDocs = async () => {
+  orderDocs.value = []
+  if (!currentOrder.value?.departmentID) return
+  try {
+    orderDocs.value = (await documentsApi.getAll({ orderId: currentOrder.value.orderID })) || []
+  } catch (err) {
+    console.warn('Lỗi tải biên bản đơn hàng:', err.message)
+  }
+}
+
+const onOrderDocSelected = async (e) => {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  if (!file || !currentOrder.value) return
+  uploadingDoc.value = true
+  try {
+    const order = currentOrder.value
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('documentName', `Biên bản bàn giao ${order.orderCode} - ${order.departmentName || ''}`.trim())
+    fd.append('documentType', 'HandoverReceipt')
+    fd.append('orderID', order.orderID)
+    fd.append('departmentID', order.departmentID)
+    fd.append('uploadedBy', 'Admin')
+    await documentsApi.upload(fd)
+    await loadOrderDocs()
+  } catch (err) {
+    alert('Lỗi import biên bản: ' + err.message)
+  } finally {
+    uploadingDoc.value = false
+  }
+}
+
+const deleteOrderDoc = async (doc) => {
+  if (!confirm(`Xóa biên bản "${doc.documentName}"?`)) return
+  try {
+    await documentsApi.delete(doc.documentID)
+    await loadOrderDocs()
+  } catch (err) {
+    alert('Lỗi xóa biên bản: ' + err.message)
+  }
+}
 const inputMode = ref('single') // 'single' | 'bulk'
 const submittingDevice = ref(false)
 const syncingAssets = ref(false)
@@ -816,8 +1351,24 @@ const serialInputRef = ref(null)
 const singleDeviceForm = reactive({
   orderItemID: null,
   serialNumber: '',
+  quantity: 1,
   assetCode: '',
   warehouseLocation: 'Kho IT - Kệ A1'
+})
+
+const singleSelectedItem = computed(() =>
+  currentOrder.value?.items?.find(it => it.orderItemID === singleDeviceForm.orderItemID)
+)
+const isSingleQtyItem = computed(() =>
+  !!singleSelectedItem.value && isQuantityAsset(singleSelectedItem.value.modelName, singleSelectedItem.value.categoryName)
+)
+const singleRemaining = computed(() =>
+  singleSelectedItem.value ? Math.max(0, singleSelectedItem.value.expectedQuantity - singleSelectedItem.value.receivedQuantity) : 0
+)
+
+// Khi chọn loại thiết bị theo số lượng, mặc định điền sẵn số lượng còn thiếu
+watch(() => singleDeviceForm.orderItemID, () => {
+  singleDeviceForm.quantity = Math.max(1, singleRemaining.value)
 })
 
 const bulkDeviceForm = reactive({
@@ -867,6 +1418,7 @@ const filteredOrders = computed(() => {
 
 const untransferredCount = computed(() => {
   if (!currentOrder.value || !currentOrder.value.devices) return 0
+  if (currentOrder.value.departmentID) return 0
   return currentOrder.value.devices.filter(d => !d.IsTransferredToAsset && !d.isTransferredToAsset).length
 })
 
@@ -886,10 +1438,12 @@ const fetchOrders = async () => {
 // Fetch Categories & Suppliers
 const fetchMeta = async () => {
   try {
-    const [cRes, sRes] = await Promise.allSettled([
+    const [cRes, sRes, dRes] = await Promise.allSettled([
       categoriesApi.getAll(),
-      suppliersApi.getAll()
+      suppliersApi.getAll(),
+      departmentsApi.getAll()
     ])
+    if (dRes.status === 'fulfilled') departmentsList.value = dRes.value || []
     if (cRes.status === 'fulfilled') categoriesList.value = cRes.value || []
     if (sRes.status === 'fulfilled') suppliersList.value = sRes.value || []
   } catch (err) {
@@ -905,6 +1459,7 @@ const openCreateModal = () => {
   createForm.orderCode = ''
   createForm.isProjectBased = false
   createForm.projectName = ''
+  createForm.departmentID = null
   createForm.supplierID = null
   createForm.supplierName = ''
   createForm.note = ''
@@ -941,11 +1496,6 @@ const onSupplierChange = () => {
 
 // Submit Bước 1: Tạo đơn
 const submitCreateOrder = async () => {
-  if (!createForm.orderName.trim()) {
-    alert('Vui lòng nhập tên đơn hàng!')
-    return
-  }
-
   if (createForm.isProjectBased && !createForm.projectName.trim()) {
     alert('Vui lòng nhập tên dự án!')
     return
@@ -953,12 +1503,14 @@ const submitCreateOrder = async () => {
 
   submitting.value = true
   try {
+    const pr = createForm.prCode?.trim() || ''
     const payload = {
-      orderName: createForm.orderName.trim(),
-      prCode: createForm.prCode?.trim() || undefined,
-      orderCode: createForm.orderCode.trim() || undefined,
+      orderName: pr || undefined,
+      prCode: pr || undefined,
+      orderCode: createForm.orderCode?.trim() || undefined,
       isProjectBased: createForm.isProjectBased,
       projectName: createForm.isProjectBased ? createForm.projectName.trim() : undefined,
+      departmentID: createForm.departmentID || undefined,
       supplierID: createForm.supplierID,
       supplierName: createForm.supplierName,
       note: createForm.note,
@@ -1003,6 +1555,7 @@ const openDetailModal = async (orderId) => {
     bulkDeviceForm.serialText = ''
 
     isDetailModalOpen.value = true
+    loadOrderDocs()
 
     nextTick(() => {
       serialInputRef.value?.focus()
@@ -1036,6 +1589,44 @@ const playBeep = (isSuccess = true) => {
 // Thêm từng thiết bị (Bước 2)
 const submitSingleDevice = async () => {
   if (submittingDevice.value) return // Chặn gửi 2 lần liên tiếp
+
+  if (isSingleQtyItem.value) {
+    const qty = Number(singleDeviceForm.quantity)
+    if (!Number.isInteger(qty) || qty < 1) {
+      alert('Vui lòng nhập số lượng hợp lệ!')
+      return
+    }
+    if (qty > singleRemaining.value) {
+      playBeep(false)
+      alert(`⚠️ VƯỢT QUÁ SỐ LƯỢNG CÒN THIẾU!
+
+Loại "${singleSelectedItem.value.modelName}" chỉ còn cần nhập thêm ${singleRemaining.value}, nhưng bạn nhập ${qty}.`)
+      return
+    }
+    submittingDevice.value = true
+    try {
+      await ordersApi.addQuantityDevices(currentOrder.value.orderID, {
+        orderItemID: singleDeviceForm.orderItemID,
+        quantity: qty,
+        warehouseLocation: singleDeviceForm.warehouseLocation
+      })
+      playBeep(true)
+      currentOrder.value = await ordersApi.getById(currentOrder.value.orderID)
+      await fetchOrders()
+      const next = currentOrder.value.items?.find(it => it.receivedQuantity < it.expectedQuantity)
+      if (next) {
+        singleDeviceForm.orderItemID = next.orderItemID
+        bulkDeviceForm.orderItemID = next.orderItemID
+      }
+      singleDeviceForm.quantity = Math.max(1, singleRemaining.value)
+    } catch (err) {
+      playBeep(false)
+      alert('❌ Không thể thêm thiết bị:\n' + err.message)
+    } finally {
+      submittingDevice.value = false
+    }
+    return
+  }
 
   const rawSerial = singleDeviceForm.serialNumber?.trim()
   if (!rawSerial) {
@@ -1242,6 +1833,143 @@ const syncOrderToAssets = async () => {
 }
 
 // Xóa đơn hàng
+// Xử lý Dropdown Thao Tác (Gom 4 nút CRUD vào 1)
+const toggleActionDropdown = (orderId, event) => {
+  event?.stopPropagation()
+  activeDropdownOrderId.value = activeDropdownOrderId.value === orderId ? null : orderId
+}
+
+const closeDropdowns = () => {
+  activeDropdownOrderId.value = null
+}
+
+const handleActionRead = (order) => {
+  closeDropdowns()
+  openDetailModal(order.orderID)
+}
+
+const handleActionUpdate = (order) => {
+  closeDropdowns()
+  openEditModal(order)
+}
+
+const handleActionAddItem = (order) => {
+  closeDropdowns()
+  targetOrderForAddItem.value = order
+  addItemForm.categoryID = categoriesList.value[0]?.categoryID || null
+  addItemForm.modelName = ''
+  addItemForm.brand = ''
+  addItemForm.specifications = ''
+  addItemForm.expectedQuantity = 1
+  addItemForm.unitPrice = null
+  addItemForm.note = ''
+  isAddItemModalOpen.value = true
+}
+
+const submitAddItem = async () => {
+  if (!targetOrderForAddItem.value) return
+  if (!addItemForm.modelName?.trim()) {
+    alert('Vui lòng nhập tên Model thiết bị!')
+    return
+  }
+  if (addItemForm.expectedQuantity < 1) {
+    alert('Số lượng dự kiến phải lớn hơn 0!')
+    return
+  }
+
+  addItemSubmitting.value = true
+  try {
+    const cat = categoriesList.value.find(c => c.categoryID === addItemForm.categoryID)
+    const payload = {
+      categoryID: addItemForm.categoryID,
+      categoryName: cat?.categoryName || undefined,
+      modelName: addItemForm.modelName.trim(),
+      brand: addItemForm.brand?.trim() || undefined,
+      specifications: addItemForm.specifications?.trim() || undefined,
+      expectedQuantity: addItemForm.expectedQuantity,
+      unitPrice: addItemForm.unitPrice ? Number(addItemForm.unitPrice) : undefined,
+      note: addItemForm.note?.trim() || undefined
+    }
+
+    await ordersApi.addItem(targetOrderForAddItem.value.orderID, payload)
+    isAddItemModalOpen.value = false
+    await fetchOrders()
+
+    // Nếu đang mở Modal Bước 2 của chính đơn này thì reload lại dữ liệu
+    if (currentOrder.value && currentOrder.value.orderID === targetOrderForAddItem.value.orderID) {
+      const updated = await ordersApi.getById(targetOrderForAddItem.value.orderID)
+      currentOrder.value = updated
+    }
+
+    alert(`✅ Đã thêm loại thiết bị "${payload.modelName}" (${payload.expectedQuantity} máy) vào đơn hàng thành công!`)
+  } catch (err) {
+    alert('Lỗi thêm loại thiết bị: ' + err.message)
+  } finally {
+    addItemSubmitting.value = false
+  }
+}
+
+const handleActionDelete = (order) => {
+  closeDropdowns()
+  confirmDeleteOrder(order)
+}
+
+// Modal Chỉnh Sửa Đơn Hàng (U in CRUD)
+const openEditModal = (order) => {
+  editForm.orderID = order.orderID
+  editForm.orderCode = order.orderCode || ''
+  editForm.orderName = order.orderName || ''
+  editForm.prCode = order.prCode || ''
+  editForm.isProjectBased = !!order.isProjectBased
+  editForm.projectName = order.projectName || ''
+  editForm.departmentID = order.departmentID || null
+  editForm.supplierID = order.supplierID || null
+  editForm.supplierName = order.supplierName || ''
+  editForm.expectedDeliveryDate = order.expectedDeliveryDate ? order.expectedDeliveryDate.substring(0, 10) : ''
+  editForm.status = order.status || 'Pending'
+  editForm.note = order.note || ''
+  isEditModalOpen.value = true
+}
+
+const onEditSupplierChange = () => {
+  const match = suppliersList.value.find(s => s.supplierID === editForm.supplierID)
+  editForm.supplierName = match ? match.supplierName : ''
+}
+
+const submitUpdateOrder = async () => {
+  if (editForm.isProjectBased && !editForm.projectName.trim()) {
+    alert('Vui lòng nhập tên dự án!')
+    return
+  }
+
+  editSubmitting.value = true
+  try {
+    const pr = editForm.prCode?.trim() || ''
+    const payload = {
+      prCode: pr || null,
+      orderName: pr || editForm.orderCode || 'Đơn hàng',
+      isProjectBased: editForm.isProjectBased,
+      projectName: editForm.isProjectBased ? editForm.projectName.trim() : null,
+      departmentID: editForm.departmentID || null,
+      supplierID: editForm.supplierID,
+      supplierName: editForm.supplierName || null,
+      expectedDeliveryDate: editForm.expectedDeliveryDate ? new Date(editForm.expectedDeliveryDate).toISOString() : null,
+      status: editForm.status,
+      note: editForm.note?.trim() || null
+    }
+
+    await ordersApi.update(editForm.orderID, payload)
+    isEditModalOpen.value = false
+    await fetchOrders()
+    alert('✅ Cập nhật thông tin đơn hàng thành công!')
+  } catch (err) {
+    alert('Lỗi cập nhật đơn hàng: ' + err.message)
+  } finally {
+    editSubmitting.value = false
+  }
+}
+
+// Xóa đơn hàng
 const confirmDeleteOrder = async (order) => {
   if (!confirm(`Bạn có chắc muốn xóa đơn hàng "${order.orderName}" (${order.orderCode})?`)) return
 
@@ -1290,10 +2018,19 @@ const getStatusBadgeClass = (status) => {
 onMounted(() => {
   fetchOrders()
   fetchMeta()
+  window.addEventListener('click', closeDropdowns)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('click', closeDropdowns)
 })
 </script>
 
 <style scoped>
+.order-docs-section {
+  margin-top: 16px;
+}
+
 .orders-page {
   padding: 24px;
   max-width: 1600px;
@@ -1506,11 +2243,13 @@ onMounted(() => {
 /* Table */
 .table-wrapper {
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .table-responsive {
   overflow-x: auto;
+  min-height: 280px;
+  padding-bottom: 70px;
 }
 
 .data-table {
@@ -1598,6 +2337,13 @@ onMounted(() => {
   border-radius: 6px;
   display: inline-flex;
   align-items: center;
+}
+
+.field-hint-dept {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: #64748b;
 }
 
 .badge-optional {
@@ -2429,5 +3175,164 @@ onMounted(() => {
 .stock-loc {
   color: #059669;
   font-weight: 500;
+}
+
+.modal-md {
+  max-width: 640px;
+}
+
+/* ======================================== */
+/* ACTION DROPDOWN: GOM 4 NÚT CRUD VÀO 1   */
+/* ======================================== */
+.action-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+  text-align: left;
+}
+
+.btn-action-dropdown-toggle {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-action-dropdown-toggle:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.btn-action-dropdown-toggle.active {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.btn-action-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.dropdown-chevron {
+  font-size: 0.75rem;
+  color: #64748b;
+  transition: transform 0.2s;
+  line-height: 1;
+}
+
+.btn-action-dropdown-toggle.active .dropdown-chevron {
+  transform: rotate(180deg);
+  color: #1d4ed8;
+}
+
+.action-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 1050;
+  min-width: 260px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.15), 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: dropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.action-dropdown-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+  color: #1e293b;
+}
+
+.action-dropdown-menu .dropdown-item:hover {
+  background: #f1f5f9;
+}
+
+.action-dropdown-menu .item-read:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.action-dropdown-menu .item-update:hover {
+  background: #fefce8;
+  color: #a16207;
+}
+
+.action-dropdown-menu .item-create:hover {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.action-dropdown-menu .item-delete:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.action-dropdown-menu .item-icon {
+  font-size: 1.05rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.action-dropdown-menu .item-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.action-dropdown-menu .item-title {
+  font-size: 0.825rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.action-dropdown-menu .item-desc {
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+.action-dropdown-menu .dropdown-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 4px 6px;
 }
 </style>

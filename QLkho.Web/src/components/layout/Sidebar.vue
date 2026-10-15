@@ -80,6 +80,16 @@
           <span>{{ $t('sidebar.employees') }}</span>
         </RouterLink>
 
+        <RouterLink to="/accounts" class="nav-item" active-class="active">
+          <div class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <span>{{ $t('sidebar.accounts') }}</span>
+        </RouterLink>
+
         <RouterLink to="/departments" class="nav-item" active-class="active">
           <div class="nav-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -99,6 +109,11 @@
           </div>
           <span>{{ $t('sidebar.categories_suppliers') }}</span>
         </RouterLink>
+
+        <div v-if="isViewer" class="hr-restricted-notice">
+          <div class="hr-notice-badge">🔒 {{ $t('auth.role_viewer') }}</div>
+          <p>{{ $t('sidebar.viewer_restricted_notice') }}</p>
+        </div>
       </template>
 
       <!-- DÀNH CHO ROLE NHÂN SỰ (HR): CHỈ HIỂN THỊ DUY NHẤT QUẢN LÝ NHÂN SỰ -->
@@ -137,7 +152,7 @@
           <polyline points="16 17 21 12 16 7"></polyline>
           <line x1="21" y1="12" x2="9" y2="12"></line>
         </svg>
-        <span>{{ $t('auth.logout') }} ({{ isHR ? 'HR' : 'Admin' }})</span>
+        <span>{{ $t('auth.logout') }} ({{ isHR ? 'HR' : isViewer ? 'Viewer' : 'Admin' }})</span>
       </button>
 
       <div class="system-status-card">
@@ -161,6 +176,7 @@ import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 const router = useRouter()
 const currentUser = computed(() => getCurrentUser())
 const isHR = computed(() => currentUser.value?.role === 'HR')
+const isViewer = computed(() => currentUser.value?.role === 'Viewer')
 
 const handleLogout = () => {
   if (confirm(t('auth.logout_confirm'))) {

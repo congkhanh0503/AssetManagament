@@ -156,14 +156,20 @@ public class EmployeeService : IEmployeeService
                 DepartmentName = e.Department != null ? e.Department.DepartmentName : string.Empty,
                 DepartmentCode = e.Department != null ? e.Department.DepartmentCode : string.Empty,
                 Title = e.Title,
+                ManagerName = e.ManagerName,
+                CreatedAt = e.CreatedAt,
                 Email = e.Email,
                 Phone = e.Phone,
+                AccountName = e.AccountName,
                 JoinDate = e.JoinDate,
                 LeaveDate = e.LeaveDate,
                 QAD_Status = e.QAD_Status ?? "Disable",
                 OA_Status = e.OA_Status ?? "Disable",
                 Email_Status = e.Email_Status ?? "Disable",
                 AD_Status = e.AD_Status ?? "Disable",
+                Mfa_Status = e.Mfa_Status ?? "Disable",
+                EvMailbox_Status = e.EvMailbox_Status ?? "Disable",
+                Migrate_Status = e.Migrate_Status ?? "Disable",
                 Status = e.Status,
                 IsOnboarding = isOnboarding,
                 IsResigned = isResigned,
@@ -217,14 +223,20 @@ public class EmployeeService : IEmployeeService
             DepartmentName = e.Department != null ? e.Department.DepartmentName : string.Empty,
             DepartmentCode = e.Department != null ? e.Department.DepartmentCode : string.Empty,
             Title = e.Title,
+            ManagerName = e.ManagerName,
+            CreatedAt = e.CreatedAt,
             Email = e.Email,
             Phone = e.Phone,
+            AccountName = e.AccountName,
             JoinDate = e.JoinDate,
             LeaveDate = e.LeaveDate,
             QAD_Status = e.QAD_Status ?? "Disable",
             OA_Status = e.OA_Status ?? "Disable",
             Email_Status = e.Email_Status ?? "Disable",
             AD_Status = e.AD_Status ?? "Disable",
+            Mfa_Status = e.Mfa_Status ?? "Disable",
+            EvMailbox_Status = e.EvMailbox_Status ?? "Disable",
+            Migrate_Status = e.Migrate_Status ?? "Disable",
             Status = e.Status,
             IsOnboarding = e.JoinDate.Date > today && e.Status != "Resigned",
             IsResigned = e.Status == "Resigned" || (e.LeaveDate.HasValue && e.LeaveDate.Value <= today),
@@ -380,25 +392,23 @@ public class EmployeeService : IEmployeeService
             EnglishName = dto.EnglishName?.Trim(),
             DepartmentID = deptId,
             Title = dto.Title?.Trim(),
+            ManagerName = dto.ManagerName?.Trim(),
             Email = dto.Email?.Trim(),
             Phone = dto.Phone?.Trim(),
+            AccountName = dto.AccountName?.Trim(),
             JoinDate = dto.JoinDate,
             LeaveDate = dto.LeaveDate,
             QAD_Status = dto.QAD_Status ?? "Disable",
             OA_Status = dto.OA_Status ?? "Disable",
             Email_Status = dto.Email_Status ?? "Disable",
             AD_Status = dto.AD_Status ?? "Disable",
+            Mfa_Status = dto.Mfa_Status ?? "Disable",
+            EvMailbox_Status = dto.EvMailbox_Status ?? "Disable",
+            Migrate_Status = dto.Migrate_Status ?? "Disable",
             Status = dto.Status ?? "Active",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = dto.CreatedAt ?? DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
-
-        // QUY TẮC TOÀN HỆ THỐNG: Nếu nhân viên có Email => Tự động kích hoạt Email và OA (Available)
-        if (!string.IsNullOrWhiteSpace(employee.Email))
-        {
-            employee.Email_Status = "Available";
-            employee.OA_Status = "Available";
-        }
 
         _context.Employees.Add(employee);
         await _context.SaveChangesAsync();
@@ -407,8 +417,8 @@ public class EmployeeService : IEmployeeService
         await CreateHistoryAsync(new CreateEmployeeHistoryDto
         {
             EmployeeID = employee.EmployeeID,
-            ActionType = "Create",
-            Title = "Thêm mới nhân sự",
+            ActionType = "OnboardingCreated",
+            Title = "Tạo hồ sơ nhân sự mới",
             Description = $"Thêm nhân viên {employee.FullName} vào hệ thống",
             NewValue = $"Mã: {employee.EmployeeCode} | Phòng: {deptId}",
             PerformedBy = "Admin"
@@ -438,6 +448,9 @@ public class EmployeeService : IEmployeeService
             }
         }
 
+        var oldStatus = employee.Status;
+        var oldTitle = employee.Title;
+
         employee.EmployeeCode = code;
         employee.FullName = dto.FullName.Trim();
         employee.EnglishName = dto.EnglishName?.Trim();
@@ -446,26 +459,54 @@ public class EmployeeService : IEmployeeService
             employee.DepartmentID = dto.DepartmentID.Value;
         }
         employee.Title = dto.Title?.Trim();
+        employee.ManagerName = dto.ManagerName?.Trim();
+        if (dto.CreatedAt.HasValue) employee.CreatedAt = dto.CreatedAt.Value;
         employee.Email = dto.Email?.Trim();
         employee.Phone = dto.Phone?.Trim();
+        employee.AccountName = dto.AccountName?.Trim();
         employee.JoinDate = dto.JoinDate;
         employee.LeaveDate = dto.LeaveDate;
         if (!string.IsNullOrWhiteSpace(dto.Status)) employee.Status = dto.Status;
         if (!string.IsNullOrWhiteSpace(dto.QAD_Status)) employee.QAD_Status = dto.QAD_Status;
         if (!string.IsNullOrWhiteSpace(dto.OA_Status)) employee.OA_Status = dto.OA_Status;
+        if (!string.IsNullOrWhiteSpace(dto.Mfa_Status)) employee.Mfa_Status = dto.Mfa_Status;
+        if (!string.IsNullOrWhiteSpace(dto.EvMailbox_Status)) employee.EvMailbox_Status = dto.EvMailbox_Status;
+        if (!string.IsNullOrWhiteSpace(dto.Migrate_Status)) employee.Migrate_Status = dto.Migrate_Status;
         if (!string.IsNullOrWhiteSpace(dto.Email_Status)) employee.Email_Status = dto.Email_Status;
         if (!string.IsNullOrWhiteSpace(dto.AD_Status)) employee.AD_Status = dto.AD_Status;
-
-        // QUY TẮC TOÀN HỆ THỐNG: Nếu nhân viên có Email => Tự động kích hoạt Email và OA (Available)
-        if (!string.IsNullOrWhiteSpace(employee.Email))
-        {
-            employee.Email_Status = "Available";
-            employee.OA_Status = "Available";
-        }
 
         employee.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        // Ghi nhận biến động hồ sơ / trạng thái nghỉ việc
+        if (oldStatus != "Resigned" && employee.Status == "Resigned")
+        {
+            await CreateHistoryAsync(new CreateEmployeeHistoryDto
+            {
+                EmployeeID = employee.EmployeeID,
+                ActionType = "Resigned",
+                Title = "Nhân viên nghỉ việc",
+                Description = $"{employee.FullName} ({employee.EmployeeCode}) đã chuyển sang trạng thái Đã nghỉ việc",
+                OldValue = oldStatus,
+                NewValue = "Resigned",
+                PerformedBy = "Admin"
+            });
+        }
+        else
+        {
+            await CreateHistoryAsync(new CreateEmployeeHistoryDto
+            {
+                EmployeeID = employee.EmployeeID,
+                ActionType = "ProfileUpdated",
+                Title = "Cập nhật hồ sơ nhân sự",
+                Description = $"Cập nhật thông tin cho {employee.FullName} ({employee.EmployeeCode})",
+                OldValue = $"Chức vụ: {oldTitle ?? "---"} | Trạng thái: {oldStatus}",
+                NewValue = $"Chức vụ: {employee.Title ?? "---"} | Trạng thái: {employee.Status}",
+                PerformedBy = "Admin"
+            });
+        }
+
         return (await GetEmployeeByIdAsync(employee.EmployeeID))!;
     }
 
@@ -490,7 +531,10 @@ public class EmployeeService : IEmployeeService
                 ((e.QAD_Status ?? "Disable") != "Disable" && (e.QAD_Status ?? "Disable") != "Deleted") ||
                 ((e.OA_Status ?? "Disable") != "Disable" && (e.OA_Status ?? "Disable") != "Deleted") ||
                 ((e.Email_Status ?? "Disable") != "Disable" && (e.Email_Status ?? "Disable") != "Deleted") ||
-                ((e.AD_Status ?? "Disable") != "Disable" && (e.AD_Status ?? "Disable") != "Deleted")
+                ((e.AD_Status ?? "Disable") != "Disable" && (e.AD_Status ?? "Disable") != "Deleted") ||
+                ((e.Mfa_Status ?? "Disable") != "Disable" && (e.Mfa_Status ?? "Disable") != "Deleted") ||
+                ((e.EvMailbox_Status ?? "Disable") != "Disable" && (e.EvMailbox_Status ?? "Disable") != "Deleted") ||
+                ((e.Migrate_Status ?? "Disable") != "Disable" && (e.Migrate_Status ?? "Disable") != "Deleted")
             ))
             .AsNoTracking()
             .ToListAsync();
@@ -522,7 +566,10 @@ public class EmployeeService : IEmployeeService
             var accountsDisabled = (e.QAD_Status == "Disable" || e.QAD_Status == "Deleted" || string.IsNullOrEmpty(e.QAD_Status)) &&
                                    (e.OA_Status == "Disable" || e.OA_Status == "Deleted" || string.IsNullOrEmpty(e.OA_Status)) &&
                                    (e.Email_Status == "Disable" || e.Email_Status == "Deleted" || string.IsNullOrEmpty(e.Email_Status)) &&
-                                   (e.AD_Status == "Disable" || e.AD_Status == "Deleted" || string.IsNullOrEmpty(e.AD_Status));
+                                   (e.AD_Status == "Disable" || e.AD_Status == "Deleted" || string.IsNullOrEmpty(e.AD_Status)) &&
+                                   (e.Mfa_Status == "Disable" || e.Mfa_Status == "Deleted" || string.IsNullOrEmpty(e.Mfa_Status)) &&
+                                   (e.EvMailbox_Status == "Disable" || e.EvMailbox_Status == "Deleted" || string.IsNullOrEmpty(e.EvMailbox_Status)) &&
+                                   (e.Migrate_Status == "Disable" || e.Migrate_Status == "Deleted" || string.IsNullOrEmpty(e.Migrate_Status));
 
             var inUseAssets = e.HeldAssets?.Where(a => a.Status == "In-Use").ToList() ?? new List<Asset>();
             var heldCount = inUseAssets.Count;
@@ -552,6 +599,9 @@ public class EmployeeService : IEmployeeService
                 OA_Status = e.OA_Status ?? "Disable",
                 Email_Status = e.Email_Status ?? "Disable",
                 AD_Status = e.AD_Status ?? "Disable",
+                Mfa_Status = e.Mfa_Status ?? "Disable",
+                EvMailbox_Status = e.EvMailbox_Status ?? "Disable",
+                Migrate_Status = e.Migrate_Status ?? "Disable",
                 HoldingAssetCount = heldCount,
                 HoldingAssetNames = inUseAssets.Select(a => $"{a.AssetCode} ({a.AssetName})").ToList()
             });
@@ -631,19 +681,22 @@ public class EmployeeService : IEmployeeService
         var employee = await _context.Employees.FindAsync(employeeId);
         if (employee == null) return false;
 
-        var oldVal = $"QAD: {employee.QAD_Status}, OA: {employee.OA_Status}, Email: {employee.Email_Status}, AD: {employee.AD_Status}";
+        var oldVal = $"QAD: {employee.QAD_Status}, OA: {employee.OA_Status}, Email: {employee.Email_Status}, AD: {employee.AD_Status}, MFA: {employee.Mfa_Status}, EV Mailbox: {employee.EvMailbox_Status}, Migrate: {employee.Migrate_Status}";
         employee.QAD_Status = dto.QAD_Status;
         employee.OA_Status = dto.OA_Status;
         employee.Email_Status = dto.Email_Status;
         employee.AD_Status = dto.AD_Status;
+        if (!string.IsNullOrWhiteSpace(dto.Mfa_Status)) employee.Mfa_Status = dto.Mfa_Status;
+        if (!string.IsNullOrWhiteSpace(dto.EvMailbox_Status)) employee.EvMailbox_Status = dto.EvMailbox_Status;
+        if (!string.IsNullOrWhiteSpace(dto.Migrate_Status)) employee.Migrate_Status = dto.Migrate_Status;
         employee.UpdatedAt = DateTime.UtcNow;
 
-        var newVal = $"QAD: {dto.QAD_Status}, OA: {dto.OA_Status}, Email: {dto.Email_Status}, AD: {dto.AD_Status}";
+        var newVal = $"QAD: {employee.QAD_Status}, OA: {employee.OA_Status}, Email: {employee.Email_Status}, AD: {employee.AD_Status}, MFA: {employee.Mfa_Status}, EV Mailbox: {employee.EvMailbox_Status}, Migrate: {employee.Migrate_Status}";
 
         await CreateHistoryAsync(new CreateEmployeeHistoryDto
         {
             EmployeeID = employeeId,
-            ActionType = "UpdateAccounts",
+            ActionType = "AccountUpdated",
             Title = "Cập nhật trạng thái tài khoản hệ thống",
             Description = $"Cập nhật 4 tài khoản hệ thống cho {employee.FullName}",
             OldValue = oldVal,
@@ -745,7 +798,7 @@ public class EmployeeService : IEmployeeService
         await CreateHistoryAsync(new CreateEmployeeHistoryDto
         {
             EmployeeID = employeeId,
-            ActionType = "UploadPDF",
+            ActionType = "HandoverUploaded",
             Title = "Tải lên biên bản bàn giao PDF",
             Description = asset != null 
                 ? $"Đã tải lên biên bản bàn giao cho thiết bị {asset.AssetCode} ({file.FileName})"
@@ -799,7 +852,7 @@ public class EmployeeService : IEmployeeService
             await CreateHistoryAsync(new CreateEmployeeHistoryDto
             {
                 EmployeeID = employeeId,
-                ActionType = "DeletePDF",
+                ActionType = "HandoverDeleted",
                 Title = "Xóa biên bản bàn giao PDF",
                 Description = $"Đã gỡ bỏ file biên bản bàn giao PDF: {doc.DocumentName}",
                 PerformedBy = "Admin"
@@ -831,7 +884,31 @@ public class EmployeeService : IEmployeeService
 
         if (!string.IsNullOrWhiteSpace(filter.ActionType))
         {
-            query = query.Where(h => h.ActionType == filter.ActionType);
+            var act = filter.ActionType.Trim();
+            if (act == "OnboardingCreated")
+                query = query.Where(h => h.ActionType == "OnboardingCreated" || h.ActionType == "Create");
+            else if (act == "AccountUpdated")
+                query = query.Where(h => h.ActionType == "AccountUpdated" || h.ActionType == "UpdateAccounts" || h.ActionType == "ImportAccounts");
+            else if (act == "HandoverUploaded")
+                query = query.Where(h => h.ActionType == "HandoverUploaded" || h.ActionType == "UploadPDF");
+            else if (act == "HandoverDeleted")
+                query = query.Where(h => h.ActionType == "HandoverDeleted" || h.ActionType == "DeletePDF");
+            else if (act == "AssetBroken")
+                query = query.Where(h => h.ActionType == "AssetBroken" || h.ActionType == "AssetMaintenance" || h.ActionType == "SendMaintenance");
+            else
+                query = query.Where(h => h.ActionType == act);
+        }
+
+        if (filter.FromDate.HasValue)
+        {
+            var fromUtc = DateTime.SpecifyKind(filter.FromDate.Value.Date, DateTimeKind.Utc);
+            query = query.Where(h => h.ActionDate >= fromUtc);
+        }
+
+        if (filter.ToDate.HasValue)
+        {
+            var toUtc = DateTime.SpecifyKind(filter.ToDate.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
+            query = query.Where(h => h.ActionDate <= toUtc);
         }
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
@@ -841,7 +918,9 @@ public class EmployeeService : IEmployeeService
                 h.Employee.FullName.ToLower().Contains(s) ||
                 (h.Employee.EmployeeCode != null && h.Employee.EmployeeCode.ToLower().Contains(s)) ||
                 h.Title.ToLower().Contains(s) ||
-                h.Description.ToLower().Contains(s)
+                (h.Description != null && h.Description.ToLower().Contains(s)) ||
+                (h.OldValue != null && h.OldValue.ToLower().Contains(s)) ||
+                (h.NewValue != null && h.NewValue.ToLower().Contains(s))
             );
         }
 

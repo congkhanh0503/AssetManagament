@@ -601,3 +601,15 @@ select.form-control option {
     margin-bottom: 2px !important;
   }
 }
+
+/* ROLE VIEWER: chỉ xem - ẩn các nút thêm/sửa/xóa/đồng bộ */
+body.role-viewer .btn-primary,
+body.role-viewer .btn-success,
+body.role-viewer .btn-purple-qr,
+body.role-viewer .btn-icon-mini,
+body.role-viewer .btn-delete-icon,
+body.role-viewer .btn-icon-del,
+body.role-viewer .btn-action-dropdown-toggle,
+body.role-viewer .btn-danger {
+  display: none !important;
+}

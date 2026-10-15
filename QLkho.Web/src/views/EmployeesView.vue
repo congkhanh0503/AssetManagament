@@ -12,11 +12,6 @@
           📥 {{ $t('employees.btn_import') }}
         </button>
 
-        <!-- Nút Import Tài Khoản AD/QAD -->
-        <button type="button" class="btn btn-secondary btn-account-import" @click="isAccountImportOpen = true">
-          ⚡ Import Tài Khoản
-        </button>
-
         <!-- Nút Xuất CSV Dropdown -->
         <div class="export-dropdown-wrapper" ref="exportDropdownRef">
           <button type="button" class="btn btn-secondary export-main-btn" @click="isExportMenuOpen = !isExportMenuOpen">
@@ -125,7 +120,6 @@
       v-model:current-page="currentPage"
       v-model:page-size="pageSize"
       @edit="openEditEmpModal"
-      @open-accounts="openAccountModal"
       @open-assets="openEmployeeAssetsModal"
       @open-history="openSingleEmpHistoryModal"
     />
@@ -188,15 +182,11 @@
       @update:search="onHistorySearchChange"
       @update:action-type="onHistoryActionTypeChange"
       @update:employee-id="onHistoryEmployeeIdChange"
-    />
-
-    <!-- MODAL 1: CẬP NHẬT 4 TÀI KHOẢN HỆ THỐNG -->
-    <EmployeeAccountsModal 
-      :is-open="isAccountModalOpen"
-      :employee="selectedEmp"
-      :submitting="submitting"
-      @close="isAccountModalOpen = false"
-      @submit="submitUpdateAccounts"
+      @update:date-preset="onHistoryDatePresetChange"
+      @update:from-date="onHistoryFromDateChange"
+      @update:to-date="onHistoryToDateChange"
+      @refresh="fetchHistories"
+      @export="handleExportHistoryCsv"
     />
 
     <!-- MODAL 2: THÊM MỚI / CHỈNH SỬA NHÂN VIÊN -->
@@ -276,13 +266,6 @@
       @close="isPdfViewerOpen = false"
     />
 
-    <!-- MODAL 8: IMPORT TÀI KHOẢN (AD, QAD, TRẠNG THÁI) -->
-    <EmployeeAccountImportModal 
-      :is-open="isAccountImportOpen"
-      @close="isAccountImportOpen = false"
-      @refresh="onAccountImportRefreshed"
-    />
-
     <!-- TOAST NOTIFICATION COMPONENT -->
     <Toast ref="toastRef" />
   </div>
@@ -290,6 +273,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { employeesApi, departmentsApi, assetsApi, categoriesApi, documentsApi } from '@/api/client'
 import { getCurrentUser } from '@/api/auth'
 import { exportToCsv } from '@/utils/exportCsv'
@@ -301,14 +285,12 @@ import EmployeeOnboardingTab from './EmployeesView/EmployeeOnboardingTab.vue'
 import EmployeeAlertsTab from './EmployeesView/EmployeeAlertsTab.vue'
 import EmployeeMissingHandoverTab from './EmployeesView/EmployeeMissingHandoverTab.vue'
 import EmployeeHistoryTab from './EmployeesView/EmployeeHistoryTab.vue'
-import EmployeeAccountsModal from './EmployeesView/EmployeeAccountsModal.vue'
 import EmployeeFormModal from './EmployeesView/EmployeeFormModal.vue'
 import EmployeeAssetsModal from './EmployeesView/EmployeeAssetsModal.vue'
 import EmployeeHistoryModal from './EmployeesView/EmployeeHistoryModal.vue'
 import EmployeePrintHandoverModal from './EmployeesView/EmployeePrintHandoverModal.vue'
 import EmployeeImportModal from './EmployeesView/EmployeeImportModal.vue'
 import EmployeePdfViewerModal from './EmployeesView/EmployeePdfViewerModal.vue'
-import EmployeeAccountImportModal from './EmployeesView/EmployeeAccountImportModal.vue'
 
 // Quản lý người dùng & vai trò
 const currentUser = computed(() => getCurrentUser())
@@ -316,6 +298,8 @@ const isHR = computed(() => currentUser.value?.role === 'HR')
 
 // Navigation state
 const currentTab = ref(isHR.value ? 'onboarding' : 'active')
+const router = useRouter()
+const route = useRoute()
 const toastRef = ref(null)
 
 // Data state
@@ -356,7 +340,10 @@ const loadingHistory = ref(false)
 const historyFilters = reactive({
   search: '',
   actionType: '',
-  employeeId: null
+  employeeId: null,
+  datePreset: 'all',
+  fromDate: '',
+  toDate: ''
 })
 
 const isUpcomingJoin = (joinDateStr) => {
@@ -484,7 +471,6 @@ const filteredOnboardingEmployees = computed(() => {
 
 // Modal States
 const selectedEmp = ref(null)
-const isAccountModalOpen = ref(false)
 const isEmpFormModalOpen = ref(false)
 const isEditEmp = ref(false)
 
@@ -504,7 +490,6 @@ const printingEquipmentList = ref([])
 const isBulkEquipmentPrint = ref(false)
 
 const isImportOpen = ref(false)
-const isAccountImportOpen = ref(false)
 const isPdfViewerOpen = ref(false)
 const viewingPdfDoc = ref(null)
 
@@ -577,6 +562,8 @@ const fetchHistories = async () => {
     if (historyFilters.search) params.search = historyFilters.search
     if (historyFilters.actionType) params.actionType = historyFilters.actionType
     if (historyFilters.employeeId) params.employeeId = historyFilters.employeeId
+    if (historyFilters.fromDate) params.fromDate = historyFilters.fromDate
+    if (historyFilters.toDate) params.toDate = historyFilters.toDate
     const res = await employeesApi.getHistories(params)
     historiesList.value = res || []
   } catch (err) {
@@ -606,36 +593,72 @@ const onHistoryEmployeeIdChange = (val) => {
   fetchHistories()
 }
 
+const onHistoryDatePresetChange = (preset) => {
+  historyFilters.datePreset = preset
+  const now = new Date()
+  const formatDateInput = (d) => {
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  if (preset === 'today') {
+    const todayStr = formatDateInput(now)
+    historyFilters.fromDate = todayStr
+    historyFilters.toDate = todayStr
+  } else if (preset === '7days') {
+    const past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    historyFilters.fromDate = formatDateInput(past)
+    historyFilters.toDate = formatDateInput(now)
+  } else if (preset === '30days') {
+    const past = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+    historyFilters.fromDate = formatDateInput(past)
+    historyFilters.toDate = formatDateInput(now)
+  } else if (preset === 'all') {
+    historyFilters.fromDate = ''
+    historyFilters.toDate = ''
+  }
+  fetchHistories()
+}
+
+const onHistoryFromDateChange = (val) => {
+  historyFilters.fromDate = val
+  historyFilters.datePreset = 'custom'
+  fetchHistories()
+}
+
+const onHistoryToDateChange = (val) => {
+  historyFilters.toDate = val
+  historyFilters.datePreset = 'custom'
+  fetchHistories()
+}
+
+const handleExportHistoryCsv = () => {
+  try {
+    const params = {}
+    if (historyFilters.search) params.search = historyFilters.search
+    if (historyFilters.actionType) params.actionType = historyFilters.actionType
+    if (historyFilters.employeeId) params.employeeId = historyFilters.employeeId
+    if (historyFilters.fromDate) params.fromDate = historyFilters.fromDate
+    if (historyFilters.toDate) params.toDate = historyFilters.toDate
+
+    const url = employeesApi.exportHistoriesCsvUrl(params)
+    window.open(url, '_blank')
+    toastRef.value?.addToast('Xuất File CSV', 'Đang tải về báo cáo lịch sử biến động...', 'success')
+  } catch (err) {
+    toastRef.value?.addToast('Lỗi xuất file', err.message, 'error')
+  }
+}
+
 // Handlers for Modals
+// Tài khoản hệ thống được quản lý ở trang riêng
 const openAccountModal = (emp) => {
   if (isHR.value) {
     toastRef.value?.addToast('Giới Hạn Quyền Hạn (HR)', 'Nhân sự HR không có quyền thay đổi trạng thái tài khoản hệ thống (QAD, OA, Email, AD). Nghiệp vụ này do Quản trị viên (Admin) và bộ phận IT phụ trách.', 'warning')
     return
   }
-  selectedEmp.value = emp
-  isAccountModalOpen.value = true
-}
-
-const submitUpdateAccounts = async (formData) => {
-  if (isHR.value) return
-  submitting.value = true
-  try {
-    await employeesApi.updateAccounts(selectedEmp.value.employeeID, formData)
-    toastRef.value?.addToast('Thành công', `Đã cập nhật trạng thái tài khoản cho ${selectedEmp.value.fullName}!`, 'success')
-    isAccountModalOpen.value = false
-    fetchEmployees()
-    fetchLeaveAlerts()
-  } catch (err) {
-    toastRef.value?.addToast('Lỗi cập nhật tài khoản', err.message, 'error')
-  } finally {
-    submitting.value = false
-  }
-}
-
-const onAccountImportRefreshed = () => {
-  fetchEmployees()
-  fetchLeaveAlerts()
-  toastRef.value?.addToast('Thành công', 'Đã cập nhật trạng thái tài khoản nhân sự từ file Excel!', 'success')
+  router.push({ name: 'accounts', query: { search: emp.employeeCode || emp.fullName } })
 }
 
 const openCreateEmpModal = () => {
@@ -661,14 +684,20 @@ const handleSaveEmployee = async (formData) => {
       englishName: formData.englishName ? formData.englishName.trim() : null,
       departmentID: formData.departmentID ? parseInt(formData.departmentID) : null,
       title: formData.title ? formData.title.trim() : null,
+      managerName: formData.managerName ? formData.managerName.trim() : null,
+      createdAt: formData.createdAt ? formData.createdAt : null,
       email: formData.email ? formData.email.trim() : null,
       phone: formData.phone ? formData.phone.trim() : null,
+      accountName: formData.accountName && formData.accountName.trim() !== 'AP\\' ? formData.accountName.trim() : null,
       joinDate: formData.joinDate ? formData.joinDate : new Date().toISOString().split('T')[0],
       leaveDate: formData.leaveDate && formData.leaveDate.trim() ? formData.leaveDate : null,
       qad_Status: formData.qaD_Status || formData.qad_Status || formData.QAD_Status || 'Disable',
       oa_Status: formData.oA_Status || formData.oa_Status || formData.OA_Status || 'Disable',
       email_Status: formData.email_Status || formData.Email_Status || 'Disable',
       ad_Status: formData.aD_Status || formData.ad_Status || formData.AD_Status || 'Disable',
+      mfa_Status: formData.mfa_Status || 'Disable',
+      evMailbox_Status: formData.evMailbox_Status || 'Disable',
+      migrate_Status: formData.migrate_Status || 'Disable',
       status: formData.status || 'Active'
     }
 
@@ -730,6 +759,7 @@ const handleAssignAsset = async (assignData) => {
       mouseAssetID: assignData.mouseAssetID || null,
       monitorAssetID: assignData.monitorAssetID || null,
       keyboardAssetID: assignData.keyboardAssetID || null,
+      extraAssetIDs: assignData.extraAssetIDs || [],
       conditionStatus: assignData.conditionStatus || 'Hoạt động tốt',
       note: assignData.note || `Cấp phát thiết bị cho ${selectedEmp.value.fullName}`
     })
@@ -745,14 +775,15 @@ const handleAssignAsset = async (assignData) => {
   }
 }
 
-const handleTransferAsset = async ({ asset, toEmployeeID, conditionStatus, note }) => {
+const handleTransferAsset = async ({ asset, toEmployeeID, conditionStatus, note, newAccount }) => {
   submitting.value = true
   try {
     await assetsApi.transfer({
       assetID: asset.assetID,
       toEmployeeID: toEmployeeID,
       conditionStatus: conditionStatus || 'Hoạt động bình thường',
-      note: note || `Điều chuyển thiết bị ${asset.assetName}`
+      note: note || `Điều chuyển thiết bị ${asset.assetName}`,
+      newAccount: newAccount || undefined
     })
     toastRef.value?.addToast('Thành công', `Đã điều chuyển thiết bị ${asset.assetName}!`, 'success')
     openEmployeeAssetsModal(selectedEmp.value)
@@ -974,7 +1005,7 @@ const submitImportEmployees = async (rows) => {
 
     const rawEmailStatus = getRowValue(row, ['trạng thái email cty', 'trạng thái email', 'email_status', 'email status', 'tài khoản email'])
     // Nếu có địa chỉ email thì mặc định kích hoạt Available (trừ khi có cột trạng thái chỉ định khác)
-    const emailStatus = rawEmailStatus ? parseAccountStatus(rawEmailStatus) : (email ? 'Available' : 'Disable')
+    const emailStatus = rawEmailStatus ? parseAccountStatus(rawEmailStatus) : 'Disable'
 
     // Nhận diện tài khoản Windows / Active Directory (Account)
     const rawAccount = getRowValue(row, ['account', 'tài khoản', 'tai khoan', 'tài khoản ad', 'ad account']).trim()
@@ -1010,7 +1041,7 @@ const submitImportEmployees = async (rows) => {
           leaveDate: existingEmp.leaveDate,
           qad_Status: existingEmp.qaD_Status || 'Disable',
           oa_Status: existingEmp.oA_Status || 'Disable',
-          email_Status: email ? 'Available' : (existingEmp.email_Status || 'Disable'),
+          email_Status: existingEmp.email_Status || 'Disable',
           ad_Status: adStatus !== 'Disable' ? adStatus : (existingEmp.ad_Status || 'Disable'),
           status: empStatus || existingEmp.status || 'Active'
         }
@@ -1231,7 +1262,15 @@ const handleExportOnboardingEmailTemplate = async () => {
   toastRef.value?.addToast('Thành công', `Đã xuất file Excel mẫu điền Email cho ${data.length} nhân sự mới!`, 'success')
 }
 
+// Lọc sẵn theo bộ phận khi chuyển từ trang Phòng Ban (?departmentId=)
+const applyDepartmentFromQuery = () => {
+  const id = parseInt(route.query.departmentId)
+  if (!isNaN(id)) selectedDepartmentId.value = id
+}
+watch(() => route.query.departmentId, applyDepartmentFromQuery)
+
 onMounted(() => {
+  applyDepartmentFromQuery()
   fetchEmployees()
   fetchLeaveAlerts()
   fetchMissingHandoverAlerts()

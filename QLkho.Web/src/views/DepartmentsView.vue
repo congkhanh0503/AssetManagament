@@ -12,7 +12,7 @@
         <p class="page-subtitle">{{ $t('departments.subtitle') }}</p>
       </div>
 
-      <button class="btn btn-primary" @click="isCreateOpen = true">
+      <button v-if="activeTab === 'departments'" class="btn btn-primary" @click="isCreateOpen = true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -21,8 +21,57 @@
       </button>
     </div>
 
+    <div class="dept-tabs">
+      <button type="button" class="dept-tab" :class="{ active: activeTab === 'departments' }" @click="activeTab = 'departments'">
+        {{ $t('departments.tab_departments') }}
+      </button>
+      <button type="button" class="dept-tab" :class="{ active: activeTab === 'managers' }" @click="activeTab = 'managers'">
+        {{ $t('departments.tab_managers') }} ({{ managers.length }})
+      </button>
+    </div>
+
+    <!-- Tab Manager -->
+    <div v-if="activeTab === 'managers'" class="glass-card manager-tab">
+      <form class="manager-add-row" @submit.prevent="submitAddManager">
+        <select class="form-control" v-model="newManagerEmployeeId" required>
+          <option value="">{{ $t('departments.manager_pick_employee') }}</option>
+          <option v-for="e in employeesForManager" :key="e.employeeID" :value="e.employeeID">
+            {{ e.fullName }}{{ e.email ? ' / ' + e.email : '' }}{{ e.title ? ' - ' + e.title : '' }}
+          </option>
+        </select>
+        <button type="submit" class="btn btn-primary" :disabled="submitting || !newManagerEmployeeId">
+          {{ $t('departments.manager_add') }}
+        </button>
+      </form>
+
+      <div v-if="managers.length === 0" class="field-hint" style="padding: 16px 0;">{{ $t('departments.manager_empty') }}</div>
+      <table v-else class="dept-sub-table">
+        <thead>
+          <tr>
+            <th>{{ $t('departments.manager_col_name') }}</th>
+            <th>Email</th>
+            <th style="width: 80px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="m in managers" :key="m.managerID">
+            <td><strong>{{ m.fullName }}</strong></td>
+            <td>{{ m.email || '---' }}</td>
+            <td style="text-align: right;">
+              <button type="button" class="btn-icon-mini btn-delete-icon" @click="deleteManager(m)" :title="$t('departments.delete_tooltip')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <!-- Departments Cards Grid -->
-    <div v-if="loading" class="table-loading">
+    <div v-else-if="loading" class="table-loading">
       <span class="loading-spinner"></span>
       <p>{{ $t('common.loading') }}</p>
     </div>
@@ -54,16 +103,26 @@
           <div class="meta-box">
             <span class="meta-label">{{ $t('departments.table_manager') }}:</span>
             <strong class="meta-value">{{ dept.managerName || $t('departments.unassigned') }}</strong>
+            <template v-if="dept.subManagers && dept.subManagers.length">
+              <span class="meta-label" style="display: block; margin-top: 6px;">{{ $t('departments.sub_managers') }}:</span>
+              <strong v-for="m in dept.subManagers" :key="m" class="meta-value" style="display: block;">{{ m }}</strong>
+            </template>
           </div>
 
-          <div class="meta-box">
-            <span class="meta-label">{{ $t('departments.table_employee_count') }}:</span>
-            <strong class="meta-value" style="color: #818cf8;">{{ dept.employeeCount }} {{ $t('departments.unit_members') }}</strong>
+          <div class="meta-box meta-box-clickable" @click="goToEmployeesPage(dept)" title="Nhấn để xem danh sách nhân sự bộ phận này">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="meta-label">{{ $t('departments.table_employee_count') }}:</span>
+              <span class="meta-hint-icon">➔</span>
+            </div>
+            <strong class="meta-value" style="color: #6366f1;">{{ dept.employeeCount }} {{ $t('departments.unit_members') }}</strong>
           </div>
 
-          <div class="meta-box" style="grid-column: span 2;">
-            <span class="meta-label">{{ $t('departments.table_asset_count') }}:</span>
-            <strong class="meta-value" style="color: #34d399;">{{ dept.assignedAssetCount }} {{ $t('departments.unit_assets') }}</strong>
+          <div class="meta-box meta-box-clickable" style="grid-column: span 2;" @click="openDeptAssetsModal(dept)" title="Nhấn để xem danh sách thiết bị đang cấp phát của bộ phận này">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="meta-label">{{ $t('departments.table_asset_count') }}:</span>
+              <span class="meta-hint-action">👁️ Xem chi tiết ➔</span>
+            </div>
+            <strong class="meta-value" style="color: #059669; font-size: 0.95rem;">{{ dept.assignedAssetCount || 0 }} {{ $t('departments.unit_assets') }}</strong>
           </div>
         </div>
       </div>
@@ -89,7 +148,11 @@
 
         <div class="form-group">
           <label class="form-label">{{ $t('departments.table_manager') }}</label>
-          <input type="text" class="form-control" v-model="createForm.managerName" placeholder="Nguyen Van A, John Doe..." />
+          <select class="form-control" v-model="createForm.managerName">
+            <option value="">{{ $t('departments.unassigned') }}</option>
+            <option v-for="name in mainManagerOptions(createForm.managerName)" :key="name" :value="name">{{ name }}</option>
+          </select>
+          <span class="field-hint">Chọn từ danh sách ở tab Manager.</span>
         </div>
 
         <div class="form-group">
@@ -127,7 +190,22 @@
 
         <div class="form-group">
           <label class="form-label">{{ $t('departments.table_manager') }}</label>
-          <input type="text" class="form-control" v-model="editForm.managerName" placeholder="Nguyen Van A..." />
+          <select class="form-control" v-model="editForm.managerName">
+            <option value="">{{ $t('departments.unassigned') }}</option>
+            <option v-for="name in mainManagerOptions(editForm.managerName)" :key="name" :value="name">{{ name }}</option>
+          </select>
+          <span class="field-hint">Chọn từ danh sách ở tab Manager. Đổi trưởng bộ phận sẽ cập nhật manager cho toàn bộ nhân sự phòng ban.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">{{ $t('departments.sub_managers') }}</label>
+          <div v-if="subManagerChoices.length === 0" class="field-hint">Chưa có nhân sự khác trong phòng ban để chọn.</div>
+          <div v-else class="sub-manager-list">
+            <label v-for="name in subManagerChoices" :key="name" class="sub-manager-item">
+              <input type="checkbox" :value="name" v-model="editForm.subManagers" />
+              <span>{{ name }}</span>
+            </label>
+          </div>
         </div>
 
         <div class="form-group">
@@ -145,22 +223,195 @@
       </form>
     </Modal>
 
+    <!-- Modal Xem Danh Sách Thiết Bị Đang Cấp Phát Của Phòng Ban -->
+    <Modal 
+      :is-open="isDeptAssetsModalOpen" 
+      :title="'Thiết Bị Của Bộ Phận: ' + (activeDept?.departmentName || '')"
+      :subtitle="'Đang cấp phát ' + (deptAssetsList.length) + ' thiết bị cho nhân sự thuộc bộ phận này'"
+      @close="isDeptAssetsModalOpen = false"
+    >
+      <div v-if="loadingDeptAssets" class="table-loading" style="padding: 30px;">
+        <span class="loading-spinner"></span>
+        <p>Đang tải danh sách thiết bị...</p>
+      </div>
+
+      <div v-else-if="deptAssetsList.length === 0" class="empty-state" style="padding: 28px; text-align: center;">
+        <div style="font-size: 2.5rem; margin-bottom: 8px;">📦</div>
+        <p style="color: #64748b; font-weight: 500; font-size: 0.9rem;">Bộ phận này hiện chưa có thiết bị nào được cấp phát trong hệ thống.</p>
+      </div>
+
+      <div v-else class="dept-assets-container">
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+          <table class="dept-sub-table">
+            <thead>
+              <tr>
+                <th style="width: 120px;">MÃ TÀI SẢN</th>
+                <th>TÊN THIẾT BỊ</th>
+                <th style="width: 140px;">SERIAL NUMBER</th>
+                <th style="width: 170px;">NGƯỜI ĐANG GIỮ</th>
+                <th style="width: 110px; text-align: center;">TRẠNG THÁI</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="asset in deptAssetsList" :key="asset.assetID">
+                <td>
+                  <strong class="code-tag-blue">{{ asset.assetCode }}</strong>
+                </td>
+                <td>
+                  <div style="font-weight: 600; color: #1e293b;">{{ asset.assetName }}</div>
+                  <div style="font-size: 0.75rem; color: #64748b;">{{ asset.categoryName || asset.brand || '' }}</div>
+                </td>
+                <td>
+                  <span style="font-family: monospace; font-size: 0.8rem; color: #475569;">
+                    {{ asset.serialNumber || '---' }}
+                  </span>
+                </td>
+                <td>
+                  <div v-if="asset.holderName" style="color: #1e40af; font-weight: 600; font-size: 0.825rem;">
+                    👤 {{ asset.holderName }}
+                    <span v-if="asset.holderCode" style="color: #64748b; font-size: 0.725rem; display: block;">({{ asset.holderCode }})</span>
+                  </div>
+                  <span v-else style="color: #94a3b8; font-size: 0.8rem;">---</span>
+                </td>
+                <td style="text-align: center;">
+                  <span class="status-pill-green">
+                    {{ asset.status === 'In-Use' ? 'Đang cấp phát' : asset.status }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-actions-right" style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <button 
+          v-if="activeDept" 
+          type="button" 
+          class="btn btn-secondary" 
+          @click="goToAssetsPage(activeDept)"
+          style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.825rem;"
+        >
+          <span>🔍 Mở bộ lọc trong Kho Tài Sản ➔</span>
+        </button>
+        <button type="button" class="btn btn-primary" @click="isDeptAssetsModalOpen = false">
+          {{ $t('common.close') || 'Đóng' }}
+        </button>
+      </div>
+    </Modal>
+
     <!-- Toast Notification -->
     <Toast ref="toastRef" />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { departmentsApi } from '@/api/client'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { departmentsApi, assetsApi, employeesApi, managersApi } from '@/api/client'
 import Modal from '@/components/common/Modal.vue'
 import Toast from '@/components/common/Toast.vue'
 
+const router = useRouter()
+
 const departments = ref([])
+const employees = ref([])
+
+// Chỉ nhân sự đang làm việc thuộc đúng phòng ban; giữ lại tên hiện tại dù không còn trong danh sách
+// Giá trị lưu dạng "Tên/email" (vd: Bob Liu/Bob.Liu@amphenol-cbs.com)
+const managerLabel = (e) => (e.email ? `${e.fullName}/${e.email}` : e.fullName)
+
+const managerOptions = (deptId, current) => {
+  const names = deptId
+    ? employees.value
+        .filter(e => e.departmentID === deptId && e.status !== 'Resigned' && !(e.leaveDate && new Date(e.leaveDate) <= new Date()))
+        .filter(e => e.fullName)
+        .map(managerLabel)
+    : []
+  const list = [...new Set(names)].sort((a, b) => a.localeCompare(b, 'vi'))
+  return current && !list.includes(current) ? [current, ...list] : list
+}
+
+// Trưởng bộ phận: chọn từ danh sách Manager (không phụ thuộc phòng ban); giữ lại giá trị hiện tại dù không còn trong danh sách
+const mainManagerOptions = (current) => {
+  const list = [...new Set(managers.value.map(managerLabel))].sort((a, b) => a.localeCompare(b, 'vi'))
+  return current && !list.includes(current) ? [current, ...list] : list
+}
+
+// Dữ liệu cũ chỉ lưu tên -> đổi sang "Tên/email" nếu tìm thấy nhân sự trùng tên trong phòng ban
+const normalizeManager = (deptId, current) => {
+  if (!current || current.includes('/')) return current || ''
+  const emp = employees.value.find(e => e.departmentID === deptId && e.fullName === current)
+  return emp ? managerLabel(emp) : current
+}
+
+// Manager nhỏ: nhân sự trong phòng ban, trừ manager chính; giữ lại các lựa chọn đã lưu
+const subManagerChoices = computed(() => {
+  const opts = managerOptions(editForm.departmentID, '').filter(n => n !== editForm.managerName)
+  return [...new Set([...editForm.subManagers, ...opts])].filter(n => n !== editForm.managerName)
+})
+
+const activeTab = ref('departments')
+const managers = ref([])
+const newManagerEmployeeId = ref('')
+
+const employeesForManager = computed(() => {
+  const taken = new Set(managers.value.map(m => m.employeeID))
+  return employees.value
+    .filter(e => e.fullName && !taken.has(e.employeeID) && e.status !== 'Resigned')
+    .sort((a, b) => a.fullName.localeCompare(b.fullName, 'vi'))
+})
+
+const fetchManagers = async () => {
+  try {
+    managers.value = (await managersApi.getAll()) || []
+  } catch (err) {
+    toastRef.value?.addToast('Lỗi tải manager', err.message, 'error')
+  }
+}
+
+const submitAddManager = async () => {
+  submitting.value = true
+  try {
+    await managersApi.create({ employeeID: newManagerEmployeeId.value })
+    newManagerEmployeeId.value = ''
+    await fetchManagers()
+    toastRef.value?.addToast('Thành công', 'Đã thêm manager!', 'success')
+  } catch (err) {
+    toastRef.value?.addToast('Lỗi thêm manager', err.message, 'error')
+  } finally {
+    submitting.value = false
+  }
+}
+
+const deleteManager = async (m) => {
+  if (!confirm(`Xóa "${m.fullName}" khỏi danh sách Manager? Các phòng ban đang dùng người này vẫn giữ nguyên.`)) return
+  try {
+    await managersApi.delete(m.managerID)
+    await fetchManagers()
+  } catch (err) {
+    toastRef.value?.addToast('Lỗi xóa manager', err.message, 'error')
+  }
+}
+
+const fetchEmployees = async () => {
+  try {
+    const res = await employeesApi.getAll()
+    employees.value = res || []
+  } catch (err) {
+    toastRef.value?.addToast('Lỗi tải nhân sự', err.message, 'error')
+  }
+}
 const loading = ref(false)
 const submitting = ref(false)
 const isCreateOpen = ref(false)
 const isEditOpen = ref(false)
+
+// State xem danh sách thiết bị của phòng ban
+const isDeptAssetsModalOpen = ref(false)
+const loadingDeptAssets = ref(false)
+const activeDept = ref(null)
+const deptAssetsList = ref([])
 
 const toastRef = ref(null)
 
@@ -176,6 +427,7 @@ const editForm = reactive({
   departmentCode: '',
   departmentName: '',
   managerName: '',
+  subManagers: [],
   description: ''
 })
 
@@ -213,7 +465,8 @@ const openEditDeptModal = (dept) => {
   editForm.departmentID = dept.departmentID
   editForm.departmentCode = dept.departmentCode
   editForm.departmentName = dept.departmentName
-  editForm.managerName = dept.managerName || ''
+  editForm.managerName = normalizeManager(dept.departmentID, dept.managerName)
+  editForm.subManagers = (dept.subManagers || []).map(m => normalizeManager(dept.departmentID, m))
   editForm.description = dept.description || ''
   isEditOpen.value = true
 }
@@ -225,6 +478,7 @@ const submitUpdateDept = async () => {
     toastRef.value?.addToast('Thành công', 'Đã cập nhật bộ phận!', 'success')
     isEditOpen.value = false
     fetchDepartments()
+    fetchEmployees()
   } catch (err) {
     toastRef.value?.addToast('Lỗi cập nhật', err.message, 'error')
   } finally {
@@ -249,12 +503,95 @@ const deleteDeptItem = async (dept) => {
   }
 }
 
+// Mở modal xem danh sách thiết bị của bộ phận
+const openDeptAssetsModal = async (dept) => {
+  activeDept.value = dept
+  isDeptAssetsModalOpen.value = true
+  loadingDeptAssets.value = true
+  deptAssetsList.value = []
+  try {
+    const res = await assetsApi.getAll({ departmentID: dept.departmentID })
+    deptAssetsList.value = Array.isArray(res) ? res : []
+  } catch (err) {
+    toastRef.value?.addToast('Lỗi', 'Không thể nạp danh sách thiết bị: ' + err.message, 'error')
+  } finally {
+    loadingDeptAssets.value = false
+  }
+}
+
+// Chuyển sang trang Kho Tài Sản có lọc sẵn theo bộ phận
+const goToAssetsPage = (dept) => {
+  isDeptAssetsModalOpen.value = false
+  router.push({ path: '/assets', query: { departmentID: dept.departmentID } })
+}
+
+// Chuyển sang trang Nhân Sự có lọc sẵn theo bộ phận
+const goToEmployeesPage = (dept) => {
+  router.push({ path: '/employees', query: { departmentId: dept.departmentID } })
+}
+
 onMounted(() => {
   fetchDepartments()
+  fetchEmployees()
+  fetchManagers()
 })
 </script>
 
 <style scoped>
+.dept-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dept-tab {
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.dept-tab.active {
+  color: #6366f1;
+  border-bottom-color: #6366f1;
+}
+
+.manager-tab {
+  padding: 16px;
+}
+
+.manager-add-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.manager-add-row select {
+  flex: 1;
+}
+
+.sub-manager-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.sub-manager-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
 .departments-page {
   display: flex;
   flex-direction: column;
@@ -390,5 +727,87 @@ onMounted(() => {
   color: #dc2626;
   border-color: #fca5a5;
   background: #fef2f2;
+}
+
+/* Interactivity cho Meta Box */
+.meta-box-clickable {
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.meta-box-clickable:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+}
+
+.meta-hint-action {
+  font-size: 0.72rem;
+  color: #059669;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.meta-box-clickable:hover .meta-hint-action {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.meta-hint-icon {
+  font-size: 0.72rem;
+  color: #818cf8;
+  font-weight: 700;
+}
+
+/* Bảng thiết bị trong Modal */
+.dept-sub-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.825rem;
+}
+
+.dept-sub-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 10px 12px;
+  border-bottom: 2px solid #e2e8f0;
+  text-align: left;
+}
+
+.dept-sub-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.dept-sub-table tr:hover td {
+  background: #f8fafc;
+}
+
+.code-tag-blue {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #0284c7;
+  background: #e0f2fe;
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid #bae6fd;
+  display: inline-block;
+}
+
+.status-pill-green {
+  background: #dcfce7;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-block;
 }
 </style>

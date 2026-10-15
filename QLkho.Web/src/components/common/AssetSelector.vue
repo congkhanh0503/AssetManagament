@@ -23,6 +23,19 @@
           <div class="selected-asset-meta-row">
             <span v-if="selectedAsset.serialNumber" class="meta-item">🏷️ S/N: <strong class="mono-text">{{ selectedAsset.serialNumber }}</strong></span>
             <span class="meta-item">📍 Vị trí kho: <strong style="color: #34d399;">{{ selectedAsset.warehouseLocation || 'Kho IT' }}</strong></span>
+            <span v-if="selectedAsset.groupCount > 1" class="meta-item">
+              Số lượng cấp:
+              <input
+                type="number"
+                class="qty-input"
+                min="1"
+                :max="selectedAsset.groupCount"
+                :value="quantity"
+                @input="onQtyInput($event.target.value)"
+                @click.stop
+              />
+              / {{ selectedAsset.groupCount }} trong kho
+            </span>
             <span v-if="selectedAsset.supplierName" class="meta-item">🏢 NCC: {{ selectedAsset.supplierName }}</span>
           </div>
         </div>
@@ -109,7 +122,8 @@
           </div>
           <div class="asset-item-info">
             <div class="asset-item-header">
-              <span class="asset-item-code">{{ a.assetCode }}</span>
+              <span v-if="a.groupCount > 1" class="asset-item-code">×{{ a.groupCount }}</span>
+              <span v-else class="asset-item-code">{{ a.assetCode }}</span>
               <strong class="asset-item-name">{{ a.assetName }}</strong>
               <span class="asset-item-cat">{{ a.categoryName }}</span>
               <span v-if="a.brand" class="asset-item-brand">{{ a.brand }}</span>
@@ -118,7 +132,8 @@
               ⚙️ {{ a.specifications }}
             </div>
             <div class="asset-item-sub">
-              <span v-if="a.serialNumber">S/N: <strong class="mono-text">{{ a.serialNumber }}</strong> • </span>
+              <span v-if="a.groupCount > 1" class="qty-badge">Còn {{ a.groupCount }} cái trong kho</span>
+              <span v-else-if="a.serialNumber">S/N: <strong class="mono-text">{{ a.serialNumber }}</strong> • </span>
               <span>📍 Vị trí: <strong>{{ a.warehouseLocation || 'Kho IT' }}</strong></span>
             </div>
           </div>
@@ -134,6 +149,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { isQuantityAsset } from '@/utils/assetKind'
 
 const props = defineProps({
   modelValue: {
@@ -147,23 +163,58 @@ const props = defineProps({
   categories: {
     type: Array,
     default: () => []
+  },
+  // Gộp các thiết bị không có S/N (chuột, bàn phím...) cùng loại thành 1 dòng kèm số lượng
+  groupQuantity: {
+    type: Boolean,
+    default: false
+  },
+  quantity: {
+    type: Number,
+    default: 1
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'change'])
+const emit = defineEmits(['update:modelValue', 'change', 'update:quantity'])
 
 const searchTerm = ref('')
 const filterCatId = ref(null)
 const quickFilter = ref('all')
 
 const assetsList = computed(() => {
-  return props.assets || []
+  const list = props.assets || []
+  if (!props.groupQuantity) return list
+
+  const result = []
+  const groups = new Map()
+  for (const a of list) {
+    if (!isQuantityAsset(a.assetName, a.categoryName)) {
+      result.push(a)
+      continue
+    }
+    const key = [a.assetName, a.brand, a.specifications, a.warehouseLocation].map(v => (v || '').trim().toLowerCase()).join('|')
+    let g = groups.get(key)
+    if (!g) {
+      g = { ...a, groupIds: [], groupCount: 0 }
+      groups.set(key, g)
+      result.push(g)
+    }
+    g.groupIds.push(a.assetID)
+    g.groupCount++
+  }
+  return result
 })
 
 const selectedAsset = computed(() => {
   if (!props.modelValue) return null
-  return (props.assets || []).find(a => a.assetID === props.modelValue) || null
+  return assetsList.value.find(a => a.assetID === props.modelValue) || null
 })
+
+const onQtyInput = (raw) => {
+  const max = selectedAsset.value?.groupCount || 1
+  const n = Math.min(max, Math.max(1, parseInt(raw, 10) || 1))
+  emit('update:quantity', n)
+}
 
 const popularCategories = computed(() => {
   if (!props.categories) return []
@@ -200,6 +251,7 @@ const filteredAssets = computed(() => {
 })
 
 const selectAsset = (asset) => {
+  emit('update:quantity', 1)
   emit('update:modelValue', asset.assetID)
   emit('change', asset)
 }
@@ -550,6 +602,20 @@ const clearSelection = () => {
 
 .asset-select-item:hover .btn-select-arrow {
   opacity: 1;
+}
+
+.qty-badge {
+  font-weight: 700;
+  color: #059669;
+}
+
+.qty-input {
+  width: 64px;
+  margin: 0 4px;
+  padding: 2px 6px;
+  border: 1px solid #86efac;
+  border-radius: 4px;
+  font-weight: 700;
 }
 
 .empty-asset-state {

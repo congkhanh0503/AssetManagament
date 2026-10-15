@@ -40,7 +40,7 @@
 
         <div class="form-group">
           <label class="form-label">Ngày Dự Kiến Trả</label>
-          <input type="date" class="form-control" v-model="form.expectedReturnDate" />
+          <DateTextInput v-model="form.expectedReturnDate" />
         </div>
       </div>
 
@@ -56,6 +56,7 @@
 </template>
 
 <script setup>
+import DateTextInput from '@/components/common/DateTextInput.vue'
 import { reactive, watch } from 'vue'
 import Modal from '@/components/common/Modal.vue'
 

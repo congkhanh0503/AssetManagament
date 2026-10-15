@@ -21,6 +21,10 @@ public class Department
     [MaxLength(255)]
     public string? ManagerName { get; set; }
 
+    // Các manager nhỏ (phó/trưởng nhóm) của phòng ban, ngăn cách bằng dấu ";"
+    [MaxLength(1000)]
+    public string? SubManagers { get; set; }
+
     [MaxLength(500)]
     public string? Description { get; set; }
 

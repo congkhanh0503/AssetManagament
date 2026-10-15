@@ -65,6 +65,11 @@ public class DocumentsController : ControllerBase
             query = query.Where(d => d.DepartmentID == filter.DepartmentID.Value);
         }
 
+        if (filter.OrderID.HasValue)
+        {
+            query = query.Where(d => d.OrderID == filter.OrderID.Value);
+        }
+
         var docs = await query
             .OrderByDescending(d => d.CreatedAt)
             .ToListAsync();
@@ -89,6 +94,7 @@ public class DocumentsController : ControllerBase
             EmployeeName = d.Employee?.FullName,
             DepartmentID = d.DepartmentID,
             DepartmentName = d.Department?.DepartmentName,
+            OrderID = d.OrderID,
             UploadedBy = d.UploadedBy,
             Description = d.Description,
             CreatedAt = d.CreatedAt
@@ -146,6 +152,7 @@ public class DocumentsController : ControllerBase
             AssetID = dto.AssetID,
             EmployeeID = dto.EmployeeID,
             DepartmentID = dto.DepartmentID,
+            OrderID = dto.OrderID,
             Description = dto.Description,
             UploadedBy = dto.UploadedBy ?? "Admin",
             CreatedAt = DateTime.UtcNow,

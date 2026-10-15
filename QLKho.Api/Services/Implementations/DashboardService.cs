@@ -32,6 +32,9 @@ public class DashboardService : IDashboardService
                 ((e.OA_Status ?? "Disable") != "Disable" && (e.OA_Status ?? "Disable") != "Deleted") ||
                 ((e.Email_Status ?? "Disable") != "Disable" && (e.Email_Status ?? "Disable") != "Deleted") ||
                 ((e.AD_Status ?? "Disable") != "Disable" && (e.AD_Status ?? "Disable") != "Deleted") ||
+                ((e.Mfa_Status ?? "Disable") != "Disable" && (e.Mfa_Status ?? "Disable") != "Deleted") ||
+                ((e.EvMailbox_Status ?? "Disable") != "Disable" && (e.EvMailbox_Status ?? "Disable") != "Deleted") ||
+                ((e.Migrate_Status ?? "Disable") != "Disable" && (e.Migrate_Status ?? "Disable") != "Deleted") ||
                 e.HeldAssets.Any(a => a.Status == "In-Use")
             ));
 
@@ -52,7 +55,7 @@ public class DashboardService : IDashboardService
     public async Task<PeriodHighlightDto> GetPeriodHighlightsAsync(string period = "month")
     {
         var now = DateTime.UtcNow;
-        var startDate = period.ToLower() == "week" ? now.AddDays(-7) : now.AddMonths(-1);
+        var startDate = period.ToLower() == "week" ? QLKho.Api.Helpers.DateRangeHelper.StartOfCurrentWeekUtc() : QLKho.Api.Helpers.DateRangeHelper.StartOfCurrentMonthUtc();
 
         var assignedCount = await _context.AssetHandoverHistories
             .CountAsync(h => h.ActionType == "Assign" && h.ActionDate >= startDate);

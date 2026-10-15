@@ -10,8 +10,10 @@ public interface IOrderService
     Task<OrderDetailDto?> UpdateOrderAsync(int orderId, UpdateOrderDto dto);
     Task<bool> DeleteOrderAsync(int orderId);
 
+    Task<OrderItemDetailDto> AddOrderItemAsync(int orderId, CreateOrderItemDto dto);
     Task<OrderDeviceItemDto> AddDeviceToOrderAsync(int orderId, AddDeviceToOrderDto dto);
     Task<List<OrderDeviceItemDto>> BulkAddDevicesToOrderAsync(int orderId, BulkAddDevicesToOrderDto dto);
+    Task<List<OrderDeviceItemDto>> AddQuantityDevicesToOrderAsync(int orderId, AddQuantityDevicesToOrderDto dto);
     Task<bool> RemoveDeviceFromOrderAsync(int orderId, int deviceItemId);
 
     Task<SyncOrderToAssetsResultDto> SyncOrderToAssetsAsync(int orderId);

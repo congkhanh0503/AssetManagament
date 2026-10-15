@@ -81,7 +81,7 @@
                   <td class="h-lbl">Mouse</td>
                   <td class="h-val font-bold">{{ hasMouse ? '1' : 'N/A' }}</td>
                   <td class="h-lbl">Bag</td>
-                  <td class="h-val font-bold">1</td>
+                  <td class="h-val font-bold">{{ hasBag ? '1' : 'N/A' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -287,6 +287,16 @@
             <span class="btn-toggle-icon">{{ hasMouse ? '✅' : '⬜' }}</span>
             <span>Cấp Kèm Chuột: <strong>{{ hasMouse ? 'Có (Mouse = 1)' : 'Không (Mouse = N/A)' }}</strong></span>
           </button>
+          <button 
+            type="button" 
+            class="btn-toggle-mouse" 
+            :class="{ active: hasBag }"
+            @click="hasBag = !hasBag"
+            title="Bấm để bật/tắt cấp kèm bag"
+          >
+            <span class="btn-toggle-icon">{{ hasBag ? '✅' : '⬜' }}</span>
+            <span>Cấp Kèm Bag: <strong>{{ hasBag ? 'Có (Bag = 1)' : 'Không (Bag = N/A)' }}</strong></span>
+          </button>
         </div>
 
         <div style="display: flex; gap: 8px; margin-left: auto;">
@@ -321,6 +331,7 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const hasMouse = ref(false)
+const hasBag = ref(true)
 const accountInfo = ref('')
 const passwordInfo = ref('@9e7w9qS@KTF')
 const qrCodeDataUrl = ref('')
@@ -367,9 +378,7 @@ watch(() => props.isOpen, (newVal) => {
     const noteStr = (props.asset?.note || '').toLowerCase()
     hasMouse.value = Boolean(noteStr.includes('chuột') || noteStr.includes('mouse'))
 
-    if (props.employee?.email && !accountInfo.value) {
-      accountInfo.value = props.employee.email.split('@')[0]
-    }
+    accountInfo.value = props.employee?.accountName || 'AP\\'
     if (!passwordInfo.value) {
       passwordInfo.value = '@9e7w9qS@KTF'
     }
@@ -678,6 +687,7 @@ const handlePrintNative = () => {
 
 .action-toggle-group {
   display: flex;
+  gap: 8px;
   align-items: center;
 }
 

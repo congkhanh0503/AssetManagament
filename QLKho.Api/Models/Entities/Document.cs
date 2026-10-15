@@ -45,6 +45,9 @@ public class Document
     [ForeignKey("DepartmentID")]
     public virtual Department? Department { get; set; }
 
+    // Biên bản bàn giao của đơn hàng (đơn đặt cho 1 phòng ban)
+    public int? OrderID { get; set; }
+
     [MaxLength(100)]
     public string UploadedBy { get; set; } = "Admin";
 

@@ -23,12 +23,20 @@ public class Employee
     [MaxLength(150)]
     public string? Title { get; set; }
 
+    // Trưởng bộ phận (manager) chịu trách nhiệm về nhân sự này
+    [MaxLength(255)]
+    public string? ManagerName { get; set; }
+
     [MaxLength(255)]
     [EmailAddress]
     public string? Email { get; set; }
 
     [MaxLength(50)]
     public string? Phone { get; set; }
+
+    // Tài khoản AD (vd: AP\username) - tự điền vào biên bản bàn giao
+    [MaxLength(100)]
+    public string? AccountName { get; set; }
 
     public DateTime JoinDate { get; set; }
     public DateTime? LeaveDate { get; set; }
@@ -53,6 +61,21 @@ public class Employee
     [MaxLength(20)]
     [Column("ad_status")]
     public string AD_Status { get; set; } = "Disable";
+
+    [Required]
+    [MaxLength(20)]
+    [Column("mfa_status")]
+    public string Mfa_Status { get; set; } = "Disable";
+
+    [Required]
+    [MaxLength(20)]
+    [Column("ev_mailbox_status")]
+    public string EvMailbox_Status { get; set; } = "Disable";
+
+    [Required]
+    [MaxLength(20)]
+    [Column("migrate_status")]
+    public string Migrate_Status { get; set; } = "Disable";
 
     [Required]
     [MaxLength(30)]
