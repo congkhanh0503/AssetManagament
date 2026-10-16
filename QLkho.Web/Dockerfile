@@ -21,13 +21,18 @@ RUN npm run build
 # ==========================================
 FROM nginx:alpine AS final
 
+# openssl để tự sinh chứng chỉ HTTPS tự ký khi container khởi động lần đầu
+RUN apk add --no-cache openssl
+COPY gen-cert.sh /gen-cert.sh
+RUN chmod +x /gen-cert.sh
+
 # Sao chép cấu hình Nginx custom
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Sao chép bản build tĩnh từ stage 1 vào thư mục phục vụ web của Nginx
 COPY --from=build /app/dist /usr/share/nginx/html
 
-EXPOSE 67
+EXPOSE 67 443
 
 ENTRYPOINT []
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["sh", "-c", "/gen-cert.sh && nginx -g 'daemon off;'"]

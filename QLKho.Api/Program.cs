@@ -55,6 +55,8 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
+builder.Services.AddHttpContextAccessor();
+
 // 3. Cấu hình CORS mở rộng
 builder.Services.AddCors(options =>
 {
@@ -78,6 +80,7 @@ builder.Services.AddScoped<QLKho.Api.Services.Interfaces.ISupplierService, QLKho
 builder.Services.AddScoped<QLKho.Api.Services.Interfaces.IBrandService, QLKho.Api.Services.Implementations.BrandService>();
 builder.Services.AddScoped<QLKho.Api.Services.Interfaces.IOrderService, QLKho.Api.Services.Implementations.OrderService>();
 builder.Services.AddScoped<QLKho.Api.Services.Interfaces.IHandoverQrService, QLKho.Api.Services.Implementations.HandoverQrService>();
+builder.Services.AddScoped<QLKho.Api.Services.Implementations.InventoryService>();
 
 // 5. Cấu hình Swagger / OpenAPI Documentation
 builder.Services.AddEndpointsApiExplorer();
@@ -319,6 +322,35 @@ using (var scope = app.Services.CreateScope())
                 email VARCHAR(255),
                 created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
+
+            -- 16. Kiểm kê tài sản: đợt kiểm kê và danh sách tài sản trong từng đợt
+            CREATE TABLE IF NOT EXISTS inventory_sessions (
+                session_id SERIAL PRIMARY KEY,
+                name VARCHAR(200) NOT NULL,
+                note VARCHAR(500),
+                status VARCHAR(20) NOT NULL DEFAULT 'Open',
+                created_by VARCHAR(100) NOT NULL DEFAULT 'Admin',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                closed_at TIMESTAMPTZ
+            );
+
+            CREATE TABLE IF NOT EXISTS inventory_items (
+                item_id SERIAL PRIMARY KEY,
+                session_id INT NOT NULL REFERENCES inventory_sessions(session_id) ON DELETE CASCADE,
+                asset_id INT NOT NULL,
+                asset_code VARCHAR(100) NOT NULL,
+                asset_name VARCHAR(255) NOT NULL DEFAULT '',
+                asset_status VARCHAR(30),
+                department_name VARCHAR(255) NOT NULL DEFAULT '',
+                holder_name VARCHAR(255),
+                holder_code VARCHAR(50),
+                is_extra BOOLEAN NOT NULL DEFAULT FALSE,
+                is_scanned BOOLEAN NOT NULL DEFAULT FALSE,
+                scanned_at TIMESTAMPTZ,
+                scanned_by VARCHAR(100),
+                CONSTRAINT uq_inventory_items_session_asset UNIQUE (session_id, asset_id)
+            );
+            CREATE INDEX IF NOT EXISTS ix_inventory_items_session_code ON inventory_items (session_id, asset_code);
 
             -- =========================================================================
             -- TỰ ĐỘNG BỔ SUNG CỘT CHO TẤT CẢ CÁC BẢNG (ĐỀ PHÒNG DATABASE CŨ BỊ THIẾU CỘT)

@@ -43,6 +43,16 @@
           <span>{{ $t('sidebar.assets') }}</span>
         </RouterLink>
 
+        <RouterLink to="/inventory" class="nav-item" active-class="active">
+          <div class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+          </div>
+          <span>{{ $t('sidebar.inventory') }}</span>
+        </RouterLink>
+
         <RouterLink to="/orders" class="nav-item" active-class="active">
           <div class="nav-icon" style="color: #0284c7;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -154,14 +164,6 @@
         </svg>
         <span>{{ $t('auth.logout') }} ({{ isHR ? 'HR' : isViewer ? 'Viewer' : 'Admin' }})</span>
       </button>
-
-      <div class="system-status-card">
-        <div class="status-indicator">
-          <span class="pulse-dot"></span>
-          <span class="status-text">{{ $t('sidebar.backend_status') }}</span>
-        </div>
-        <div class="status-sub">{{ $t('sidebar.db_connected') }}</div>
-      </div>
     </div>
   </aside>
 </template>

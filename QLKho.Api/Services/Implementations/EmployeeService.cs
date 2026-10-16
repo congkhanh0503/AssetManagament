@@ -12,10 +12,14 @@ public class EmployeeService : IEmployeeService
     private readonly AppDbContext _context;
     private readonly string _handoverDir;
     private readonly string _webRootDir;
+    private readonly IHttpContextAccessor? _httpContextAccessor;
 
-    public EmployeeService(AppDbContext context)
+    private string CurrentActor => ActorResolver.Resolve(_httpContextAccessor, "Admin");
+
+    public EmployeeService(AppDbContext context, IHttpContextAccessor? httpContextAccessor = null)
     {
         _context = context;
+        _httpContextAccessor = httpContextAccessor;
         _webRootDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
         _handoverDir = Path.Combine(_webRootDir, "uploads", "handovers");
         if (!Directory.Exists(_handoverDir))
@@ -421,7 +425,7 @@ public class EmployeeService : IEmployeeService
             Title = "Tạo hồ sơ nhân sự mới",
             Description = $"Thêm nhân viên {employee.FullName} vào hệ thống",
             NewValue = $"Mã: {employee.EmployeeCode} | Phòng: {deptId}",
-            PerformedBy = "Admin"
+            PerformedBy = CurrentActor
         });
 
         return (await GetEmployeeByIdAsync(employee.EmployeeID))!;
@@ -490,7 +494,7 @@ public class EmployeeService : IEmployeeService
                 Description = $"{employee.FullName} ({employee.EmployeeCode}) đã chuyển sang trạng thái Đã nghỉ việc",
                 OldValue = oldStatus,
                 NewValue = "Resigned",
-                PerformedBy = "Admin"
+                PerformedBy = CurrentActor
             });
         }
         else
@@ -503,7 +507,7 @@ public class EmployeeService : IEmployeeService
                 Description = $"Cập nhật thông tin cho {employee.FullName} ({employee.EmployeeCode})",
                 OldValue = $"Chức vụ: {oldTitle ?? "---"} | Trạng thái: {oldStatus}",
                 NewValue = $"Chức vụ: {employee.Title ?? "---"} | Trạng thái: {employee.Status}",
-                PerformedBy = "Admin"
+                PerformedBy = CurrentActor
             });
         }
 
@@ -701,7 +705,7 @@ public class EmployeeService : IEmployeeService
             Description = $"Cập nhật 4 tài khoản hệ thống cho {employee.FullName}",
             OldValue = oldVal,
             NewValue = newVal,
-            PerformedBy = "Admin"
+            PerformedBy = CurrentActor
         });
 
         await _context.SaveChangesAsync();
@@ -804,7 +808,7 @@ public class EmployeeService : IEmployeeService
                 ? $"Đã tải lên biên bản bàn giao cho thiết bị {asset.AssetCode} ({file.FileName})"
                 : $"Đã tải lên biên bản bàn giao: {file.FileName}",
             NewValue = relativeUrl,
-            PerformedBy = "Admin"
+            PerformedBy = CurrentActor
         });
 
         return relativeUrl;
@@ -855,7 +859,7 @@ public class EmployeeService : IEmployeeService
                 ActionType = "HandoverDeleted",
                 Title = "Xóa biên bản bàn giao PDF",
                 Description = $"Đã gỡ bỏ file biên bản bàn giao PDF: {doc.DocumentName}",
-                PerformedBy = "Admin"
+                PerformedBy = CurrentActor
             });
 
             return true;

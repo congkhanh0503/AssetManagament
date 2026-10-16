@@ -11,10 +11,15 @@ public class AssetService : IAssetService
 {
     private readonly AppDbContext _context;
 
-    public AssetService(AppDbContext context)
+    private readonly IHttpContextAccessor? _httpContextAccessor;
+
+    public AssetService(AppDbContext context, IHttpContextAccessor? httpContextAccessor = null)
     {
         _context = context;
+        _httpContextAccessor = httpContextAccessor;
     }
+
+    private string Actor(string? fallback = null) => ActorResolver.Resolve(_httpContextAccessor, fallback);
 
     public async Task<List<AssetItemDto>> GetAssetsAsync(AssetFilterDto filter)
     {
@@ -366,7 +371,7 @@ public class AssetService : IAssetService
                     Description = $"Được cấp phát thiết bị {a.AssetName} ({a.AssetCode}) - S/N: {a.SerialNumber ?? "---"} | Tình trạng: {dto.ConditionStatus ?? "Hoạt động tốt"}",
                     OldValue = fromLoc,
                     NewValue = $"{a.AssetCode} ({a.AssetName})",
-                    PerformedBy = dto.CreatedBy ?? "Admin",
+                    PerformedBy = Actor(dto.CreatedBy),
                     ActionDate = now
                 });
             }
@@ -463,7 +468,7 @@ public class AssetService : IAssetService
             Description = $"Tiếp nhận thiết bị {asset.AssetName} ({asset.AssetCode}) từ {(fromEmployee != null ? $"{fromEmployee.FullName} ({fromEmployee.EmployeeCode})" : "người dùng cũ")}. Tình trạng: {dto.ConditionStatus ?? "Hoạt động bình thường"}",
             OldValue = fromEmployee != null ? $"{fromEmployee.FullName} ({fromEmployee.EmployeeCode})" : "Chưa có chủ",
             NewValue = $"{toEmployee.FullName} ({toEmployee.EmployeeCode})",
-            PerformedBy = dto.CreatedBy ?? "Admin",
+            PerformedBy = Actor(dto.CreatedBy),
             ActionDate = now
         });
 
@@ -478,7 +483,7 @@ public class AssetService : IAssetService
                 Description = $"Bàn giao thiết bị {asset.AssetName} ({asset.AssetCode}) sang cho {toEmployee.FullName} ({toEmployee.EmployeeCode})",
                 OldValue = $"{fromEmployee.FullName} ({fromEmployee.EmployeeCode})",
                 NewValue = $"{toEmployee.FullName} ({toEmployee.EmployeeCode})",
-                PerformedBy = dto.CreatedBy ?? "Admin",
+                PerformedBy = Actor(dto.CreatedBy),
                 ActionDate = now
             });
         }
@@ -525,7 +530,7 @@ public class AssetService : IAssetService
                 Description = $"Đã thu hồi thiết bị {asset.AssetName} ({asset.AssetCode}) về kho ({asset.WarehouseLocation}). Tình trạng: {dto.ConditionStatus ?? "Đã thu hồi về kho"}",
                 OldValue = "Đang sử dụng",
                 NewValue = $"Đã thu hồi ({asset.WarehouseLocation})",
-                PerformedBy = dto.CreatedBy ?? "Admin",
+                PerformedBy = Actor(dto.CreatedBy),
                 ActionDate = now
             });
         }
@@ -613,7 +618,7 @@ public class AssetService : IAssetService
                 Description = $"{condStatus}. Thiết bị được chuyển về {asset.WarehouseLocation}",
                 OldValue = "Đang sử dụng",
                 NewValue = isMaintenance ? "Đang bảo trì" : "Báo hỏng",
-                PerformedBy = "Admin",
+                PerformedBy = Actor(),
                 ActionDate = now
             });
         }

@@ -70,6 +70,16 @@
             🖨️ In Biên Bản (A4)
           </button>
 
+          <!-- Nút In Tem QR dán lên thiết bị -->
+          <button 
+            type="button" 
+            class="btn btn-sm btn-success"
+            @click="$emit('print-label', asset)"
+            title="In tem QR dán lên thiết bị"
+          >
+            🏷️ In Tem QR
+          </button>
+
           <!-- Nút Sửa -->
           <button 
             type="button" 
@@ -193,7 +203,7 @@ defineProps({
   }
 })
 
-defineEmits(['close', 'assign', 'transfer', 'return', 'report-issue', 'print', 'edit', 'delete'])
+defineEmits(['close', 'assign', 'transfer', 'return', 'report-issue', 'print', 'print-label', 'edit', 'delete'])
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '---'

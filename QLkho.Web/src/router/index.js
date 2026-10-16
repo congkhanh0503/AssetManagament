@@ -7,6 +7,7 @@ import DepartmentsView from '../views/DepartmentsView.vue'
 import CategoriesSuppliersView from '../views/CategoriesSuppliersView.vue'
 import DocumentsView from '../views/DocumentsView.vue'
 import OrdersView from '../views/OrdersView.vue'
+import InventoryView from '../views/InventoryView.vue'
 import LoginView from '../views/LoginView.vue'
 import { isAuthenticated, getCurrentUser } from '../api/auth.js'
 
@@ -29,6 +30,12 @@ const router = createRouter({
       path: '/assets',
       name: 'assets',
       component: AssetsView,
+      meta: { requiresAuth: true, roles: ['Admin', 'Viewer'] },
+    },
+    {
+      path: '/inventory',
+      name: 'inventory',
+      component: InventoryView,
       meta: { requiresAuth: true, roles: ['Admin', 'Viewer'] },
     },
     {

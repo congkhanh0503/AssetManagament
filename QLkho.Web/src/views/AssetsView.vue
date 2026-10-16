@@ -83,6 +83,7 @@
       @return="handleOpenReturnFromDetail"
       @report-issue="handleOpenReportIssueFromDetail"
       @print="handleOpenPrintFromDetail"
+      @print-label="handleOpenLabelFromDetail"
       @edit="handleOpenEditFromDetail"
       @delete="handleDeleteAsset"
     />
@@ -171,6 +172,13 @@
       :categories="categories"
       :departments="departments"
       @close="isPrintHandoverOpen = false"
+    />
+
+    <!-- 8b. MODAL IN TEM QR DÁN THIẾT BỊ -->
+    <AssetLabelModal 
+      :is-open="isLabelOpen"
+      :asset="selectedAsset"
+      @close="isLabelOpen = false"
     />
 
     <!-- 9. MODAL CẢNH BÁO BẢO HÀNH -->
@@ -320,6 +328,7 @@ import AssetReportIssueModal from './AssetsView/AssetReportIssueModal.vue'
 import AssetImportModal from './AssetsView/AssetImportModal.vue'
 import AssetHandoverImportModal from './AssetsView/AssetHandoverImportModal.vue'
 import AssetPrintModal from './AssetsView/AssetPrintModal.vue'
+import AssetLabelModal from './AssetsView/AssetLabelModal.vue'
 import AssetWarrantyModal from './AssetsView/AssetWarrantyModal.vue'
 import AssetBrandModal from './AssetsView/AssetBrandModal.vue'
 
@@ -365,6 +374,7 @@ const isReportIssueOpen = ref(false)
 const isImportOpen = ref(false)
 const isHandoverImportOpen = ref(false)
 const isPrintHandoverOpen = ref(false)
+const isLabelOpen = ref(false)
 const isWarrantyModalOpen = ref(false)
 const isBrandManagerOpen = ref(false)
 const isHistoryModalOpen = ref(false)
@@ -675,6 +685,11 @@ const handleOpenReportIssueFromDetail = (asset) => {
 const handleOpenPrintFromDetail = (asset) => {
   selectedAsset.value = asset
   isPrintHandoverOpen.value = true
+}
+
+const handleOpenLabelFromDetail = (asset) => {
+  selectedAsset.value = asset
+  isLabelOpen.value = true
 }
 
 const handleOpenEditFromDetail = (asset) => {

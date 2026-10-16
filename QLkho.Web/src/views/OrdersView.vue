@@ -12,8 +12,8 @@
             </svg>
           </div>
           <div>
-            <h1 class="page-title">Quản Lý Đơn Hàng & Nhập Kho</h1>
-            <p class="page-subtitle">Khởi tạo đơn hàng, đối soát thiết bị nhận thực tế, cảnh báo thiếu hàng và tự động đồng bộ sang Kho tài sản</p>
+            <h1 class="page-title">{{ $t('orders.title') }}</h1>
+            <p class="page-subtitle">{{ $t('orders.subtitle') }}</p>
           </div>
         </div>
       </div>
@@ -24,14 +24,14 @@
             <polyline points="1 20 1 14 7 14"></polyline>
             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
           </svg>
-          <span>Làm mới</span>
+          <span>{{ $t('orders.refresh') }}</span>
         </button>
         <button type="button" class="btn btn-primary btn-create-order" @click="openCreateModal">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
-          <span>+ Tạo Đơn Hàng Mới</span>
+          <span>{{ $t('orders.btn_create_order') }}</span>
         </button>
       </div>
     </div>
@@ -41,50 +41,50 @@
       <div class="glass-card kpi-card">
         <div class="kpi-icon-box blue">📦</div>
         <div>
-          <div class="kpi-label">Tổng đơn hàng</div>
+          <div class="kpi-label">{{ $t('orders.kpi_total') }}</div>
           <div class="kpi-val">{{ orders.length }}</div>
         </div>
       </div>
       <div class="glass-card kpi-card">
         <div class="kpi-icon-box amber">⏳</div>
         <div>
-          <div class="kpi-label">Chờ nhận hàng</div>
+          <div class="kpi-label">{{ $t('orders.kpi_pending') }}</div>
           <div class="kpi-val">{{ kpiStats.pending }}</div>
         </div>
       </div>
       <div class="glass-card kpi-card">
         <div class="kpi-icon-box indigo">🚚</div>
         <div>
-          <div class="kpi-label">Đang nhận hàng</div>
+          <div class="kpi-label">{{ $t('orders.kpi_receiving') }}</div>
           <div class="kpi-val">{{ kpiStats.receiving }}</div>
         </div>
       </div>
       <div class="glass-card kpi-card" :class="{ 'warning-highlight': kpiStats.shortage > 0 }">
         <div class="kpi-icon-box red">⚠️</div>
         <div>
-          <div class="kpi-label">Vận chuyển thiếu</div>
+          <div class="kpi-label">{{ $t('orders.kpi_shortage') }}</div>
           <div class="kpi-val" style="color: #dc2626;">{{ kpiStats.shortage }}</div>
         </div>
       </div>
       <div class="glass-card kpi-card">
         <div class="kpi-icon-box green">✅</div>
         <div>
-          <div class="kpi-label">Đã hoàn tất</div>
+          <div class="kpi-label">{{ $t('orders.status_completed') }}</div>
           <div class="kpi-val" style="color: #059669;">{{ kpiStats.completed }}</div>
         </div>
       </div>
       <div class="glass-card kpi-card highlight-stock">
         <div class="kpi-icon-box emerald">🏢</div>
         <div>
-          <div class="kpi-label">Kho thiết bị</div>
-          <div class="kpi-val" style="color: #059669;">{{ kpiStats.totalInWarehouse }} <span class="kpi-unit">máy</span></div>
+          <div class="kpi-label">{{ $t('orders.kpi_warehouse') }}</div>
+          <div class="kpi-val" style="color: #059669;">{{ kpiStats.totalInWarehouse }} <span class="kpi-unit">{{ $t('orders.unit_device') }}</span></div>
         </div>
       </div>
       <div class="glass-card kpi-card highlight-inuse">
         <div class="kpi-icon-box purple">👤</div>
         <div>
-          <div class="kpi-label">Đang cấp phát</div>
-          <div class="kpi-val" style="color: #2563eb;">{{ kpiStats.totalInUse }} <span class="kpi-unit">máy</span></div>
+          <div class="kpi-label">{{ $t('orders.kpi_in_use') }}</div>
+          <div class="kpi-val" style="color: #2563eb;">{{ kpiStats.totalInUse }} <span class="kpi-unit">{{ $t('orders.unit_device') }}</span></div>
         </div>
       </div>
     </div>
@@ -99,7 +99,7 @@
         <input 
           type="text" 
           v-model="searchKeyword" 
-          placeholder="Tìm theo Mã đơn, PR Code, Tên dự án, Nhà cung cấp..." 
+          :placeholder="$t('orders.search_ph')" 
         />
         <button v-if="searchKeyword" class="btn-clear" @click="searchKeyword = ''">✕</button>
       </div>
@@ -111,7 +111,7 @@
           :class="{ active: currentStatusFilter === 'ALL' }"
           @click="currentStatusFilter = 'ALL'"
         >
-          Tất cả ({{ orders.length }})
+          {{ $t('orders.filter_all', { count: orders.length }) }}
         </button>
         <button 
           type="button" 
@@ -119,7 +119,7 @@
           :class="{ active: currentStatusFilter === 'Pending' }"
           @click="currentStatusFilter = 'Pending'"
         >
-          Chờ nhận
+          {{ $t('orders.status_pending') }}
         </button>
         <button 
           type="button" 
@@ -127,7 +127,7 @@
           :class="{ active: currentStatusFilter === 'Receiving' }"
           @click="currentStatusFilter = 'Receiving'"
         >
-          Đang nhận
+          {{ $t('orders.status_receiving') }}
         </button>
         <button 
           type="button" 
@@ -135,7 +135,7 @@
           :class="{ active: currentStatusFilter === 'Shortage' }"
           @click="currentStatusFilter = 'Shortage'"
         >
-          ⚠️ Vận chuyển thiếu
+          ⚠️ {{ $t('orders.filter_shortage') }}
         </button>
         <button 
           type="button" 
@@ -143,7 +143,7 @@
           :class="{ active: currentStatusFilter === 'Completed' }"
           @click="currentStatusFilter = 'Completed'"
         >
-          Hoàn tất
+          {{ $t('orders.filter_completed') }}
         </button>
       </div>
     </div>
@@ -152,27 +152,27 @@
     <div class="glass-card table-wrapper">
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
-        <span>Đang tải danh sách đơn hàng...</span>
+        <span>{{ $t('orders.loading') }}</span>
       </div>
 
       <div v-else-if="filteredOrders.length === 0" class="empty-state">
         <div class="empty-icon">📦</div>
-        <h3>Không tìm thấy đơn hàng nào</h3>
-        <p>Bấm vào nút "+ Tạo Đơn Hàng Mới" để bắt đầu quy trình nhập thiết bị.</p>
+        <h3>{{ $t('orders.empty_title') }}</h3>
+        <p>{{ $t('orders.empty_hint') }}</p>
       </div>
 
       <div v-else class="table-responsive">
         <table class="data-table">
           <thead>
             <tr>
-              <th style="width: 130px;">MÃ ĐƠN HÀNG</th>
-              <th style="width: 260px;">MÃ PR (PR CODE)</th>
-              <th style="width: 170px;">DỰ ÁN</th>
-              <th style="width: 130px;">NGÀY TẠO</th>
-              <th style="width: 190px;">TIẾN ĐỘ NHẬN THIẾT BỊ</th>
-              <th style="width: 165px;">KHO / ĐANG CẤP</th>
-              <th style="width: 135px;">TRẠNG THÁI</th>
-              <th style="width: 140px; text-align: center;">THAO TÁC</th>
+              <th style="width: 130px;">{{ $t('orders.col_order_code') }}</th>
+              <th style="width: 260px;">{{ $t('orders.col_pr_code') }}</th>
+              <th style="width: 170px;">{{ $t('orders.col_project') }}</th>
+              <th style="width: 130px;">{{ $t('orders.col_created') }}</th>
+              <th style="width: 190px;">{{ $t('orders.col_progress') }}</th>
+              <th style="width: 165px;">{{ $t('orders.col_stock_inuse') }}</th>
+              <th style="width: 135px;">{{ $t('orders.col_status') }}</th>
+              <th style="width: 140px; text-align: center;">{{ $t('orders.col_actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -184,16 +184,16 @@
                 <div class="order-title-cell">
                   <div class="order-name-row">
                     <strong class="order-name-text">
-                      {{ order.prCode || order.orderName || '--- (Không có PR)' }}
+                      {{ order.prCode || order.orderName || $t('orders.no_pr') }}
                     </strong>
-                    <span v-if="order.prCode && order.orderName && order.orderName !== order.prCode" class="pr-badge" :title="'Mã PR: ' + order.prCode">
+                    <span v-if="order.prCode && order.orderName && order.orderName !== order.prCode" class="pr-badge" :title="$t('orders.pr_code_prefix', { code: order.prCode })">
                       PR: {{ order.prCode }}
                     </span>
                   </div>
                   <div class="order-sub-meta">
-                    <span v-if="order.departmentName" class="sup-tag" :title="'Chỉ cấp phát cho bộ phận ' + order.departmentName">🏬 Đặt bởi: {{ order.departmentName }}</span>
+                    <span v-if="order.departmentName" class="sup-tag" :title="$t('orders.title_dept_only', { dept: order.departmentName })">🏬 {{ $t('orders.ordered_by', { dept: order.departmentName }) }}</span>
                     <span v-if="order.supplierName" class="sup-tag">🏢 {{ order.supplierName }}</span>
-                    <span class="type-tag">📦 {{ order.itemTypesCount }} loại thiết bị</span>
+                    <span class="type-tag">📦 {{ $t('orders.item_types_count', { count: order.itemTypesCount }) }}</span>
                   </div>
                   <div v-if="order.note" class="order-note-text" :title="order.note">📝 {{ order.note }}</div>
                 </div>
@@ -223,24 +223,24 @@
                     ></div>
                   </div>
                   <div class="progress-text-row">
-                    <span><strong>{{ order.totalReceivedQuantity }}</strong> / {{ order.totalExpectedQuantity }} máy</span>
+                    <span><strong>{{ order.totalReceivedQuantity }}</strong> / {{ order.totalExpectedQuantity }} {{ $t('orders.unit_device') }}</span>
                     <span class="percent-text">{{ getProgressPercent(order) }}%</span>
                   </div>
                   <div v-if="order.hasWarning" class="shortage-warning-badge">
-                    ⚠️ Thiếu {{ order.missingQuantity }} máy (vận chuyển thiếu)
+                    ⚠️ {{ $t('orders.shortage_in_transit', { count: order.missingQuantity }) }}
                   </div>
                 </div>
               </td>
               <td>
                 <div class="allocation-badges">
-                  <div class="alloc-badge stock" title="Số thiết bị thuộc đơn đang nằm trong kho">
+                  <div class="alloc-badge stock" :title="$t('orders.alloc_stock_title')">
                     <span class="alloc-dot green"></span>
-                    <span class="alloc-txt">Kho:</span>
+                    <span class="alloc-txt">{{ $t('orders.alloc_stock_label') }}</span>
                     <strong class="alloc-num">{{ order.inWarehouseCount || 0 }}</strong>
                   </div>
-                  <div class="alloc-badge inuse" title="Số thiết bị thuộc đơn đã được cấp phát cho nhân viên">
+                  <div class="alloc-badge inuse" :title="$t('orders.alloc_inuse_title')">
                     <span class="alloc-dot blue"></span>
-                    <span class="alloc-txt">Đang cấp:</span>
+                    <span class="alloc-txt">{{ $t('orders.alloc_inuse_label') }}</span>
                     <strong class="alloc-num">{{ order.inUseCount || 0 }}</strong>
                   </div>
                 </div>
@@ -257,10 +257,10 @@
                     class="btn-action-dropdown-toggle" 
                     :class="{ active: activeDropdownOrderId === order.orderID }"
                     @click="toggleActionDropdown(order.orderID, $event)"
-                    title="Menu thao tác CRUD với đơn hàng này"
+                    :title="$t('orders.action_menu_title')"
                   >
                     <span class="btn-action-icon">⚙️</span>
-                    <span class="btn-action-text">Thao tác</span>
+                    <span class="btn-action-text">{{ $t('orders.action') }}</span>
                     <span class="dropdown-chevron">▾</span>
                   </button>
 
@@ -278,8 +278,8 @@
                     >
                       <span class="item-icon">🔍</span>
                       <div class="item-text-wrap">
-                        <span class="item-title">Xem Chi Tiết & Nhập Máy</span>
-                        <span class="item-desc">Đối soát số lượng, quét Serial</span>
+                        <span class="item-title">{{ $t('orders.menu_view') }}</span>
+                        <span class="item-desc">{{ $t('orders.menu_view_desc') }}</span>
                       </div>
                     </button>
 
@@ -291,8 +291,8 @@
                     >
                       <span class="item-icon">✏️</span>
                       <div class="item-text-wrap">
-                        <span class="item-title">Chỉnh Sửa Đơn Hàng</span>
-                        <span class="item-desc">Đổi mã PR, dự án, trạng thái...</span>
+                        <span class="item-title">{{ $t('orders.edit_title') }}</span>
+                        <span class="item-desc">{{ $t('orders.menu_edit_desc') }}</span>
                       </div>
                     </button>
 
@@ -304,8 +304,8 @@
                     >
                       <span class="item-icon">➕</span>
                       <div class="item-text-wrap">
-                        <span class="item-title">Thêm Loại Thiết Bị</span>
-                        <span class="item-desc">Bổ sung thiết bị cho đơn này</span>
+                        <span class="item-title">{{ $t('orders.menu_add_item') }}</span>
+                        <span class="item-desc">{{ $t('orders.menu_add_item_desc') }}</span>
                       </div>
                     </button>
 
@@ -319,8 +319,8 @@
                     >
                       <span class="item-icon">🗑️</span>
                       <div class="item-text-wrap">
-                        <span class="item-title text-danger">Xóa Đơn Hàng</span>
-                        <span class="item-desc">Gỡ bỏ đơn hàng khỏi hệ thống</span>
+                        <span class="item-title text-danger">{{ $t('orders.menu_delete') }}</span>
+                        <span class="item-desc">{{ $t('orders.menu_delete_desc') }}</span>
                       </div>
                     </button>
                   </div>
@@ -341,8 +341,8 @@
           <div class="modal-title-box">
             <div class="modal-icon blue">📦</div>
             <div>
-              <h2 class="modal-title">Tạo Đơn Hàng Nhập Thiết Bị</h2>
-              <p class="modal-subtitle">Bước 1: Khai báo thông tin đơn, dự án và danh sách các loại thiết bị cần mua</p>
+              <h2 class="modal-title">{{ $t('orders.create_title') }}</h2>
+              <p class="modal-subtitle">{{ $t('orders.create_subtitle') }}</p>
             </div>
           </div>
           <button type="button" class="btn-close" @click="isCreateModalOpen = false">✕</button>
@@ -351,38 +351,38 @@
         <form @submit.prevent="submitCreateOrder" class="modal-body">
           <div class="form-grid-2">
             <div class="form-group">
-              <label class="form-label">Mã PR (PR CODE) <span class="badge-optional">Tùy chọn (có thể để trống)</span></label>
+              <label class="form-label">{{ $t('orders.pr_code_label') }} <span class="badge-optional">{{ $t('orders.optional_blank') }}</span></label>
               <input 
                 type="text" 
                 class="form-control" 
                 v-model="createForm.prCode" 
-                placeholder="VD: PR-2026-001 (để trống nếu không có)" 
+                :placeholder="$t('orders.pr_ph')" 
               />
             </div>
             <div class="form-group">
-              <label class="form-label">Bộ phận đặt hàng <span class="badge-optional">Tùy chọn</span></label>
+              <label class="form-label">{{ $t('orders.ordering_dept') }} <span class="badge-optional">{{ $t('orders.optional') }}</span></label>
               <select class="form-control" v-model="createForm.departmentID">
-                <option :value="null">— Kho chung (cấp phát cho mọi bộ phận) —</option>
+                <option :value="null">{{ $t('orders.shared_stock') }}</option>
                 <option v-for="d in departmentsList" :key="d.departmentID" :value="d.departmentID">{{ d.departmentName }}</option>
               </select>
-              <span class="field-hint-dept">Nếu đơn do bộ phận khác đặt, thiết bị chỉ được cấp phát cho nhân sự bộ phận đó.</span>
+              <span class="field-hint-dept">{{ $t('orders.dept_hint') }}</span>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Mã PO (PO Code)</label>
+              <label class="form-label">{{ $t('orders.po_code_label') }}</label>
               <input 
                 type="text" 
                 class="form-control" 
                 v-model="createForm.orderCode" 
-                placeholder="Tự động sinh (VD: PO-20261006-001)" 
+                :placeholder="$t('orders.po_ph')" 
               />
             </div>
           </div>
 
           <div class="form-group" style="margin-top: 10px;">
-            <label class="form-label">Nhà cung cấp</label>
+            <label class="form-label">{{ $t('orders.supplier') }}</label>
             <select class="form-control" v-model="createForm.supplierID" @change="onSupplierChange">
-              <option :value="null">-- Chọn nhà cung cấp (nếu có) --</option>
+              <option :value="null">{{ $t('orders.supplier_ph') }}</option>
               <option v-for="sup in suppliersList" :key="sup.supplierID" :value="sup.supplierID">
                 {{ sup.supplierName }}
               </option>
@@ -393,27 +393,27 @@
           <div class="project-box">
             <label class="checkbox-label">
               <input type="checkbox" v-model="createForm.isProjectBased" />
-              <span class="checkbox-text">Đơn hàng này thuộc Dự án cụ thể</span>
+              <span class="checkbox-text">{{ $t('orders.is_project') }}</span>
             </label>
             <div v-if="createForm.isProjectBased" class="project-input-wrap">
-              <label class="form-label">Tên dự án <span class="req">*</span></label>
+              <label class="form-label">{{ $t('orders.project_name') }} <span class="req">*</span></label>
               <input 
                 type="text" 
                 class="form-control" 
                 v-model="createForm.projectName" 
                 required 
-                placeholder="VD: Dự án Smart Factory Q4, Dự án Setup Chi nhánh mới..." 
+                :placeholder="$t('orders.project_ph')" 
               />
             </div>
           </div>
 
           <div class="form-group" style="margin-top: 10px;">
-            <label class="form-label">Ghi chú đơn hàng</label>
+            <label class="form-label">{{ $t('orders.order_note') }}</label>
             <input 
               type="text" 
               class="form-control" 
               v-model="createForm.note" 
-              placeholder="Ghi chú về tiến độ giao hàng, người phụ trách..." 
+              :placeholder="$t('orders.note_ph')" 
             />
           </div>
 
@@ -421,11 +421,11 @@
           <div class="items-section">
             <div class="section-header-row">
               <div>
-                <h3 class="section-title">Danh Sách Loại Thiết Bị Trong Đơn</h3>
-                <p class="section-subtitle">Khai báo từng dòng thiết bị cần mua và số lượng dự kiến của mỗi loại</p>
+                <h3 class="section-title">{{ $t('orders.items_title') }}</h3>
+                <p class="section-subtitle">{{ $t('orders.items_subtitle') }}</p>
               </div>
               <button type="button" class="btn btn-outline-primary btn-sm" @click="addCreateItemRow">
-                + Thêm Loại Thiết Bị
+                {{ $t('orders.btn_add_item_plus') }}
               </button>
             </div>
 
@@ -438,17 +438,17 @@
                     type="button" 
                     class="btn-remove-row" 
                     @click="removeCreateItemRow(idx)"
-                    title="Xóa loại này"
+                    :title="$t('orders.remove_type_title')"
                   >
-                    ✕ Xóa
+                    ✕ {{ $t('orders.delete') }}
                   </button>
                 </div>
 
                 <div class="form-grid-3">
                   <div class="form-group">
-                    <label class="form-label">Phân loại <span class="req">*</span></label>
+                    <label class="form-label">{{ $t('orders.category') }} <span class="req">*</span></label>
                     <select class="form-control" v-model="it.categoryID" required>
-                      <option :value="null">-- Chọn phân loại --</option>
+                      <option :value="null">{{ $t('orders.category_ph') }}</option>
                       <option v-for="cat in categoriesList" :key="cat.categoryID" :value="cat.categoryID">
                         {{ cat.categoryName }}
                       </option>
@@ -456,18 +456,18 @@
                   </div>
 
                   <div class="form-group">
-                    <label class="form-label">Tên Model thiết bị <span class="req">*</span></label>
+                    <label class="form-label">{{ $t('orders.model_name') }} <span class="req">*</span></label>
                     <input 
                       type="text" 
                       class="form-control" 
                       v-model="it.modelName" 
                       required 
-                      placeholder="VD: HP EliteBook 640 G11, Dell P2422H..." 
+                      :placeholder="$t('orders.model_ph')" 
                     />
                   </div>
 
                   <div class="form-group">
-                    <label class="form-label">Hãng sản xuất</label>
+                    <label class="form-label">{{ $t('orders.manufacturer') }}</label>
                     <input 
                       type="text" 
                       class="form-control" 
@@ -479,17 +479,17 @@
 
                 <div class="form-grid-3" style="margin-top: 10px;">
                   <div class="form-group" style="grid-column: span 2;">
-                    <label class="form-label">Cấu hình chi tiết</label>
+                    <label class="form-label">{{ $t('orders.spec_detail') }}</label>
                     <input 
                       type="text" 
                       class="form-control" 
                       v-model="it.specifications" 
-                      placeholder="VD: Core Ultra 5-125U | RAM: 16Gb | SSD: 512Gb | Màn hình: 14inch..." 
+                      :placeholder="$t('orders.spec_ph')" 
                     />
                   </div>
 
                   <div class="form-group">
-                    <label class="form-label">Số lượng đặt <span class="req">*</span></label>
+                    <label class="form-label">{{ $t('orders.qty_ordered') }} <span class="req">*</span></label>
                     <input 
                       type="number" 
                       class="form-control" 
@@ -505,10 +505,10 @@
           </div>
 
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="isCreateModalOpen = false">Hủy</button>
+            <button type="button" class="btn btn-secondary" @click="isCreateModalOpen = false">{{ $t('orders.cancel') }}</button>
             <button type="submit" class="btn btn-primary" :disabled="submitting">
               <span v-if="submitting" class="spinner-mini"></span>
-              <span>Lưu Đơn & Chuyển Sang Nhập Thiết Bị →</span>
+              <span>{{ $t('orders.save_and_receive') }}</span>
             </button>
           </div>
         </form>
@@ -524,8 +524,8 @@
           <div class="modal-title-box">
             <div class="modal-icon orange">✏️</div>
             <div>
-              <h2 class="modal-title">Chỉnh Sửa Đơn Hàng</h2>
-              <p class="modal-subtitle">Cập nhật thông tin mã PR, dự án, nhà cung cấp và trạng thái đơn hàng</p>
+              <h2 class="modal-title">{{ $t('orders.edit_title') }}</h2>
+              <p class="modal-subtitle">{{ $t('orders.edit_subtitle') }}</p>
             </div>
           </div>
           <button type="button" class="btn-close" @click="isEditModalOpen = false">✕</button>
@@ -534,52 +534,52 @@
         <form @submit.prevent="submitUpdateOrder" class="modal-body">
           <div class="form-grid-2">
             <div class="form-group">
-              <label class="form-label">Mã PR (PR CODE) <span class="badge-optional">Tùy chọn (có thể để trống)</span></label>
+              <label class="form-label">{{ $t('orders.pr_code_label') }} <span class="badge-optional">{{ $t('orders.optional_blank') }}</span></label>
               <input 
                 type="text" 
                 class="form-control" 
                 v-model="editForm.prCode" 
-                placeholder="VD: PR-2026-001 (để trống nếu không có)" 
+                :placeholder="$t('orders.pr_ph')" 
               />
             </div>
             <div class="form-group">
-              <label class="form-label">Bộ phận đặt hàng <span class="badge-optional">Tùy chọn</span></label>
+              <label class="form-label">{{ $t('orders.ordering_dept') }} <span class="badge-optional">{{ $t('orders.optional') }}</span></label>
               <select class="form-control" v-model="editForm.departmentID">
-                <option :value="null">— Kho chung (cấp phát cho mọi bộ phận) —</option>
+                <option :value="null">{{ $t('orders.shared_stock') }}</option>
                 <option v-for="d in departmentsList" :key="d.departmentID" :value="d.departmentID">{{ d.departmentName }}</option>
               </select>
-              <span class="field-hint-dept">Nếu đơn do bộ phận khác đặt, thiết bị chỉ được cấp phát cho nhân sự bộ phận đó.</span>
+              <span class="field-hint-dept">{{ $t('orders.dept_hint') }}</span>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Mã PO (PO Code)</label>
+              <label class="form-label">{{ $t('orders.po_code_label') }}</label>
               <input 
                 type="text" 
                 class="form-control" 
                 v-model="editForm.orderCode" 
                 disabled 
                 style="background: #f1f5f9; cursor: not-allowed; font-weight: 700;"
-                title="Mã đơn hàng không thể chỉnh sửa" 
+                :title="$t('orders.order_code_locked')" 
               />
             </div>
           </div>
 
           <div class="form-grid-2" style="margin-top: 10px;">
             <div class="form-group">
-              <label class="form-label">Trạng thái đơn hàng</label>
+              <label class="form-label">{{ $t('orders.order_status') }}</label>
               <select class="form-control" v-model="editForm.status">
-                <option value="Pending">🕒 Chờ nhận hàng (Pending)</option>
-                <option value="Receiving">📥 Đang nhận hàng (Receiving)</option>
-                <option value="Partial">⚠️ Nhận một phần / Còn thiếu (Partial)</option>
-                <option value="Completed">✅ Đã hoàn tất (Completed)</option>
-                <option value="Cancelled">✕ Đã hủy đơn (Cancelled)</option>
+                <option value="Pending">🕒 {{ $t('orders.opt_pending') }}</option>
+                <option value="Receiving">📥 {{ $t('orders.opt_receiving') }}</option>
+                <option value="Partial">⚠️ {{ $t('orders.opt_partial') }}</option>
+                <option value="Completed">✅ {{ $t('orders.opt_completed') }}</option>
+                <option value="Cancelled">✕ {{ $t('orders.opt_cancelled') }}</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Nhà cung cấp</label>
+              <label class="form-label">{{ $t('orders.supplier') }}</label>
               <select class="form-control" v-model="editForm.supplierID" @change="onEditSupplierChange">
-                <option :value="null">-- Chọn nhà cung cấp (nếu có) --</option>
+                <option :value="null">{{ $t('orders.supplier_ph') }}</option>
                 <option v-for="sup in suppliersList" :key="sup.supplierID" :value="sup.supplierID">
                   {{ sup.supplierName }}
                 </option>
@@ -591,42 +591,42 @@
           <div class="project-box" style="margin-top: 10px;">
             <label class="checkbox-label">
               <input type="checkbox" v-model="editForm.isProjectBased" />
-              <span class="checkbox-text">Đơn hàng này thuộc Dự án cụ thể</span>
+              <span class="checkbox-text">{{ $t('orders.is_project') }}</span>
             </label>
             <div v-if="editForm.isProjectBased" class="project-input-wrap">
-              <label class="form-label">Tên dự án <span class="req">*</span></label>
+              <label class="form-label">{{ $t('orders.project_name') }} <span class="req">*</span></label>
               <input 
                 type="text" 
                 class="form-control" 
                 v-model="editForm.projectName" 
                 required 
-                placeholder="VD: Dự án Smart Factory Q4, Dự án Setup Chi nhánh mới..." 
+                :placeholder="$t('orders.project_ph')" 
               />
             </div>
           </div>
 
           <div class="form-grid-2" style="margin-top: 10px;">
             <div class="form-group">
-              <label class="form-label">Ngày giao hàng dự kiến</label>
+              <label class="form-label">{{ $t('orders.expected_delivery') }}</label>
               <DateTextInput v-model="editForm.expectedDeliveryDate" />
             </div>
 
             <div class="form-group">
-              <label class="form-label">Ghi chú đơn hàng</label>
+              <label class="form-label">{{ $t('orders.order_note') }}</label>
               <input 
                 type="text" 
                 class="form-control" 
                 v-model="editForm.note" 
-                placeholder="Ghi chú về tiến độ giao hàng, người phụ trách..." 
+                :placeholder="$t('orders.note_ph')" 
               />
             </div>
           </div>
 
           <div class="modal-footer" style="margin-top: 20px;">
-            <button type="button" class="btn btn-secondary" @click="isEditModalOpen = false">Hủy</button>
+            <button type="button" class="btn btn-secondary" @click="isEditModalOpen = false">{{ $t('orders.cancel') }}</button>
             <button type="submit" class="btn btn-primary" :disabled="editSubmitting">
               <span v-if="editSubmitting" class="spinner-mini"></span>
-              <span>💾 Lưu Thay Đổi</span>
+              <span>💾 {{ $t('orders.save_changes') }}</span>
             </button>
           </div>
         </form>
@@ -645,25 +645,25 @@
             <div>
               <div class="title-code-row">
                 <span class="code-badge order-badge">{{ currentOrder.orderCode }}</span>
-                <h2 class="modal-title">{{ currentOrder.prCode ? `Mã PR: ${currentOrder.prCode}` : (currentOrder.orderName || currentOrder.orderCode) }}</h2>
+                <h2 class="modal-title">{{ currentOrder.prCode ? $t('orders.pr_code_prefix', { code: currentOrder.prCode }) : (currentOrder.orderName || currentOrder.orderCode) }}</h2>
                 <span :class="getStatusBadgeClass(currentOrder.status)">
                   {{ getStatusText(currentOrder.status) }}
                 </span>
                 <div class="modal-allocation-tags">
-                  <span class="modal-alloc-tag stock" title="Số lượng thiết bị đang nằm trong kho">
-                    🏢 Kho: <strong>{{ currentOrder.inWarehouseCount || 0 }}</strong>
+                  <span class="modal-alloc-tag stock" :title="$t('orders.modal_stock_title')">
+                    🏢 {{ $t('orders.alloc_stock_label') }} <strong>{{ currentOrder.inWarehouseCount || 0 }}</strong>
                   </span>
-                  <span class="modal-alloc-tag inuse" title="Số lượng thiết bị đã cấp phát cho nhân viên">
-                    👤 Đang cấp: <strong>{{ currentOrder.inUseCount || 0 }}</strong>
+                  <span class="modal-alloc-tag inuse" :title="$t('orders.modal_inuse_title')">
+                    👤 {{ $t('orders.alloc_inuse_label') }} <strong>{{ currentOrder.inUseCount || 0 }}</strong>
                   </span>
                 </div>
               </div>
               <p class="modal-subtitle">
                 <span v-if="currentOrder.isProjectBased && currentOrder.projectName" class="proj-highlight">
-                  🎯 Dự án: {{ currentOrder.projectName }}
+                  🎯 {{ $t('orders.project_prefix') }} {{ currentOrder.projectName }}
                 </span>
-                <span v-if="currentOrder.supplierName"> | 🏢 Nhà cung cấp: {{ currentOrder.supplierName }}</span>
-                | 📅 Ngày tạo: {{ formatDate(currentOrder.orderDate) }}
+                <span v-if="currentOrder.supplierName"> | 🏢 {{ $t('orders.supplier_prefix') }} {{ currentOrder.supplierName }}</span>
+                | 📅 {{ $t('orders.created_prefix') }} {{ formatDate(currentOrder.orderDate) }}
               </p>
             </div>
           </div>
@@ -675,12 +675,10 @@
           <div v-if="currentOrder.hasWarning" class="alert-banner-warning">
             <div class="alert-icon">⚠️</div>
             <div class="alert-content">
-              <strong>CẢNH BÁO VẬN CHUYỂN THIẾU HÀNG:</strong>
-              <div>
-                Đơn hàng được đặt <strong>{{ currentOrder.totalExpectedQuantity }}</strong> thiết bị, nhưng thực tế mới nhận và quét được <strong>{{ currentOrder.totalReceivedQuantity }}</strong> thiết bị (<strong>Thiếu {{ currentOrder.missingQuantity }} máy</strong>).
+              <strong>{{ $t('orders.banner_title') }}</strong>
+              <div v-html="$t('orders.banner_body', { expected: currentOrder.totalExpectedQuantity, received: currentOrder.totalReceivedQuantity, missing: currentOrder.missingQuantity })">
               </div>
-              <div class="alert-sub">
-                👉 Bạn vẫn có thể nhấn nút <strong>"Đồng bộ vào Quản lý tài sản"</strong> bên dưới để đưa {{ currentOrder.totalReceivedQuantity }} máy đã nhận vào sử dụng trước. Đơn hàng sẽ tự động ghi nhận trạng thái <strong>Nhận một phần</strong> để theo dõi đợt hàng tiếp theo.
+              <div class="alert-sub" v-html="$t('orders.banner_sub', { received: currentOrder.totalReceivedQuantity })">
               </div>
             </div>
           </div>
@@ -688,11 +686,11 @@
           <!-- BẢNG ĐỐI SOÁT CÁC LOẠI THIẾT BỊ TRONG ĐƠN -->
           <div class="reconcile-card">
             <div class="reconcile-header">
-              <h3>Bảng Đối Soát Số Lượng Từng Loại Thiết Bị</h3>
+              <h3>{{ $t('orders.recon_title') }}</h3>
               <div class="reconcile-stat">
-                Đã nhận: <strong style="color: #2563eb;">{{ currentOrder.totalReceivedQuantity }}</strong> / {{ currentOrder.totalExpectedQuantity }} máy
+                {{ $t('orders.received_label') }} <strong style="color: #2563eb;">{{ currentOrder.totalReceivedQuantity }}</strong> / {{ currentOrder.totalExpectedQuantity }} {{ $t('orders.unit_device') }}
                 <span class="reconcile-sub-stat">
-                  (🏢 Kho: <strong>{{ currentOrder.inWarehouseCount || 0 }}</strong> | 👤 Đang cấp: <strong>{{ currentOrder.inUseCount || 0 }}</strong>)
+                  (🏢 {{ $t('orders.alloc_stock_label') }} <strong>{{ currentOrder.inWarehouseCount || 0 }}</strong> | 👤 {{ $t('orders.alloc_inuse_label') }} <strong>{{ currentOrder.inUseCount || 0 }}</strong>)
                 </span>
               </div>
             </div>
@@ -700,19 +698,19 @@
             <table class="sub-table">
               <thead>
                 <tr>
-                  <th>Loại Thiết Bị</th>
+                  <th>{{ $t('orders.col_device_type') }}</th>
                   <th>Model</th>
-                  <th>Cấu Hình</th>
-                  <th style="width: 80px; text-align: center;">SL Đặt</th>
-                  <th style="width: 80px; text-align: center;">Đã Nhận</th>
-                  <th style="width: 90px; text-align: center;">Trong Kho</th>
-                  <th style="width: 90px; text-align: center;">Đang Cấp</th>
-                  <th style="width: 120px; text-align: center;">Tình Trạng</th>
+                  <th>{{ $t('orders.col_spec') }}</th>
+                  <th style="width: 80px; text-align: center;">{{ $t('orders.col_qty_ordered') }}</th>
+                  <th style="width: 80px; text-align: center;">{{ $t('orders.col_received') }}</th>
+                  <th style="width: 90px; text-align: center;">{{ $t('orders.col_in_stock') }}</th>
+                  <th style="width: 90px; text-align: center;">{{ $t('orders.col_assigned') }}</th>
+                  <th style="width: 120px; text-align: center;">{{ $t('orders.col_condition') }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="it in currentOrder.items" :key="it.orderItemID" :class="{ 'row-shortage': it.isShortage }">
-                  <td><span class="cat-pill">{{ it.categoryName || 'Thiết bị' }}</span></td>
+                  <td><span class="cat-pill">{{ it.categoryName || t('orders.default_category') }}</span></td>
                   <td><strong>{{ it.modelName }}</strong></td>
                   <td class="spec-cell-mini" :title="it.specifications">{{ it.specifications || '---' }}</td>
                   <td style="text-align: center; font-weight: 600;">{{ it.expectedQuantity }}</td>
@@ -725,10 +723,10 @@
                   </td>
                   <td style="text-align: center;">
                     <span v-if="it.isShortage" class="status-badge-shortage">
-                      ⚠️ Thiếu {{ it.missingQuantity }}
+                      ⚠️ {{ $t('orders.short_n', { count: it.missingQuantity }) }}
                     </span>
                     <span v-else class="status-badge-complete">
-                      ✅ Đủ ({{ it.receivedQuantity }}/{{ it.expectedQuantity }})
+                      ✅ {{ $t('orders.enough', { received: it.receivedQuantity, expected: it.expectedQuantity }) }}
                     </span>
                   </td>
                 </tr>
@@ -740,8 +738,8 @@
           <div class="device-input-section">
             <div class="device-input-header">
               <div>
-                <h3 class="section-title">Nhập Thiết Bị Vào Đơn Hàng</h3>
-                <p class="section-subtitle">Quét mã vạch hoặc nhập số Serial của từng máy được giao</p>
+                <h3 class="section-title">{{ $t('orders.receive_title') }}</h3>
+                <p class="section-subtitle">{{ $t('orders.receive_subtitle') }}</p>
               </div>
               <div class="input-mode-tabs">
                 <button 
@@ -750,7 +748,7 @@
                   :class="{ active: inputMode === 'single' }"
                   @click="inputMode = 'single'"
                 >
-                  ⚡ Nhập / Quét Từng Máy
+                  ⚡ {{ $t('orders.mode_single') }}
                 </button>
                 <button 
                   type="button" 
@@ -758,7 +756,7 @@
                   :class="{ active: inputMode === 'bulk' }"
                   @click="inputMode = 'bulk'"
                 >
-                  📋 Dán Hàng Loạt Serial
+                  📋 {{ $t('orders.mode_bulk') }}
                 </button>
               </div>
             </div>
@@ -767,16 +765,16 @@
             <div v-if="inputMode === 'single'" class="single-input-box">
               <form @submit.prevent="submitSingleDevice" class="single-form-grid">
                 <div class="form-group">
-                  <label class="form-label">Chọn Loại Thiết Bị <span class="req">*</span></label>
+                  <label class="form-label">{{ $t('orders.select_type') }} <span class="req">*</span></label>
                   <select class="form-control" v-model="singleDeviceForm.orderItemID" required>
                     <option v-for="it in currentOrder.items" :key="it.orderItemID" :value="it.orderItemID">
-                      {{ it.modelName }} {{ it.receivedQuantity >= it.expectedQuantity ? '(✅ ĐÃ ĐỦ ' + it.receivedQuantity + '/' + it.expectedQuantity + ')' : '(⚡ Cần nhập: ' + it.receivedQuantity + '/' + it.expectedQuantity + ')' }}
+                      {{ it.modelName }} {{ it.receivedQuantity >= it.expectedQuantity ? $t('orders.item_opt_full', { received: it.receivedQuantity, expected: it.expectedQuantity }) : $t('orders.item_opt_need', { received: it.receivedQuantity, expected: it.expectedQuantity }) }}
                     </option>
                   </select>
                 </div>
 
                 <div v-if="isSingleQtyItem" class="form-group">
-                  <label class="form-label">Số lượng nhập (không cần S/N) <span class="req">*</span></label>
+                  <label class="form-label">{{ $t('orders.qty_no_sn') }} <span class="req">*</span></label>
                   <input 
                     type="number" 
                     class="form-control highlight-input" 
@@ -794,26 +792,26 @@
                     class="form-control highlight-input" 
                     v-model="singleDeviceForm.serialNumber" 
                     required 
-                    placeholder="Quét mã vạch hoặc nhập Serial..." 
+                    :placeholder="$t('orders.serial_ph')" 
                     ref="serialInputRef"
                     autofocus
                   />
                 </div>
 
                 <div v-if="!isSingleQtyItem" class="form-group">
-                  <label class="form-label">Mã tài sản (để trống tự sinh)</label>
+                  <label class="form-label">{{ $t('orders.asset_code_label') }}</label>
                   <input 
                     type="text" 
                     class="form-control" 
                     v-model="singleDeviceForm.assetCode" 
-                    placeholder="VD: TTH-NB00256 (Tự động)" 
+                    :placeholder="$t('orders.asset_code_ph')" 
                   />
                 </div>
 
                 <div class="form-group btn-col">
                   <button type="submit" class="btn btn-primary btn-add-device" :disabled="submittingDevice">
                     <span v-if="submittingDevice" class="spinner-mini"></span>
-                    <span>+ Thêm Máy</span>
+                    <span>{{ $t('orders.btn_add_device') }}</span>
                   </button>
                 </div>
               </form>
@@ -822,23 +820,23 @@
             <!-- CHẾ ĐỘ 2: DÁN HÀNG LOẠT SERIAL -->
             <div v-else class="bulk-input-box">
               <div class="form-group" style="margin-bottom: 12px;">
-                <label class="form-label">Chọn Loại Thiết Bị Cần Nhập <span class="req">*</span></label>
+                <label class="form-label">{{ $t('orders.select_type_bulk') }} <span class="req">*</span></label>
                 <select class="form-control" v-model="bulkDeviceForm.orderItemID" required>
                   <option v-for="it in currentOrder.items" :key="it.orderItemID" :value="it.orderItemID">
-                    {{ it.modelName }} {{ it.receivedQuantity >= it.expectedQuantity ? '(✅ ĐÃ ĐỦ ' + it.receivedQuantity + '/' + it.expectedQuantity + ')' : '(⚡ Cần nhập: ' + it.receivedQuantity + '/' + it.expectedQuantity + ')' }}
+                    {{ it.modelName }} {{ it.receivedQuantity >= it.expectedQuantity ? $t('orders.item_opt_full', { received: it.receivedQuantity, expected: it.expectedQuantity }) : $t('orders.item_opt_need', { received: it.receivedQuantity, expected: it.expectedQuantity }) }}
                   </option>
                 </select>
               </div>
 
               <div class="form-group">
-                <label class="form-label">Dán Danh Sách Serial Number (Mỗi dòng một Serial) <span class="req">*</span></label>
+                <label class="form-label">{{ $t('orders.bulk_label') }} <span class="req">*</span></label>
                 <textarea 
                   class="form-control bulk-textarea" 
                   rows="5" 
                   v-model="bulkDeviceForm.serialText" 
                   placeholder="5CD5183JTG&#10;5CD5072DWT&#10;5CD5183KL9&#10;..."
                 ></textarea>
-                <span class="field-hint">Hệ thống sẽ tự động bóc tách các dòng và sinh mã tài sản tăng dần.</span>
+                <span class="field-hint">{{ $t('orders.bulk_hint') }}</span>
               </div>
 
               <button 
@@ -849,7 +847,7 @@
                 style="margin-top: 10px;"
               >
                 <span v-if="submittingDevice" class="spinner-mini"></span>
-                <span>Thêm Hàng Loạt Thiết Bị Vào Đơn</span>
+                <span>{{ $t('orders.btn_add_bulk') }}</span>
               </button>
             </div>
           </div>
@@ -857,17 +855,17 @@
           <!-- DANH SÁCH THIẾT BỊ ĐÃ NHẬP VÀO ĐƠN -->
           <div class="devices-list-section">
             <div class="list-title-row">
-              <h4>Danh Sách Thiết Bị Đã Nhập Vào Đơn ({{ currentOrder.devices.length }} máy)</h4>
+              <h4>{{ $t('orders.devices_list_title', { count: currentOrder.devices.length }) }}</h4>
               <span v-if="currentOrder.departmentID" class="badge-pending-sync" style="background: #eff6ff; color: #1d4ed8;">
-                🏬 Đơn của bộ phận {{ currentOrder.departmentName }} – không đồng bộ vào kho
+                🏬 {{ $t('orders.dept_order_no_sync', { dept: currentOrder.departmentName }) }}
               </span>
               <span v-else-if="untransferredCount > 0" class="badge-pending-sync">
-                ⚡ {{ untransferredCount }} máy chưa đồng bộ vào kho
+                ⚡ {{ $t('orders.pending_sync_count', { count: untransferredCount }) }}
               </span>
             </div>
 
             <div v-if="currentOrder.devices.length === 0" class="empty-devices">
-              Chưa có thiết bị nào được quét/nhập vào đơn. Hãy sử dụng ô quét Serial bên trên để bắt đầu.
+              {{ $t('orders.no_devices') }}
             </div>
 
             <div v-else class="table-responsive" style="max-height: 280px; overflow-y: auto;">
@@ -875,12 +873,12 @@
                 <thead>
                   <tr>
                     <th style="width: 35px;">#</th>
-                    <th style="width: 130px;">MÃ TÀI SẢN</th>
+                    <th style="width: 130px;">{{ $t('orders.col_asset_code') }}</th>
                     <th style="width: 160px;">SERIAL NUMBER</th>
-                    <th>TÊN THIẾT BỊ</th>
-                    <th style="width: 200px;">HIỆN TRẠNG / VỊ TRÍ</th>
-                    <th style="width: 135px;">ĐỒNG BỘ VÀO KHO</th>
-                    <th style="width: 55px; text-align: center;">XÓA</th>
+                    <th>{{ $t('orders.col_device_name') }}</th>
+                    <th style="width: 200px;">{{ $t('orders.col_state_location') }}</th>
+                    <th style="width: 135px;">{{ $t('orders.col_sync_stock') }}</th>
+                    <th style="width: 55px; text-align: center;">{{ $t('orders.col_delete') }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -892,31 +890,31 @@
                     <td>
                       <div v-if="dev.assetStatus === 'In-Use'" class="holder-info" :title="dev.currentHolderName">
                         <span class="alloc-dot blue"></span>
-                        <span class="holder-name">👤 {{ dev.currentHolderName || 'Đang cấp phát' }}</span>
+                        <span class="holder-name">👤 {{ dev.currentHolderName || t('orders.in_use_default') }}</span>
                         <span v-if="dev.currentHolderCode" class="holder-code">({{ dev.currentHolderCode }})</span>
                       </div>
                       <div v-else-if="dev.assetStatus === 'Broken'" class="holder-info text-danger">
                         <span class="alloc-dot red"></span>
-                        <span>🛠️ Hỏng hóc</span>
+                        <span>🛠️ {{ $t('orders.dev_broken') }}</span>
                       </div>
                       <div v-else-if="dev.assetStatus === 'Maintenance'" class="holder-info text-warning">
                         <span class="alloc-dot amber"></span>
-                        <span>🔧 Đang bảo trì</span>
+                        <span>🔧 {{ $t('orders.dev_maintenance') }}</span>
                       </div>
                       <div v-else class="holder-info">
                         <span class="alloc-dot green"></span>
-                        <span class="stock-loc">🏢 Trong kho ({{ dev.warehouseLocation || 'Kho IT' }})</span>
+                        <span class="stock-loc">🏢 {{ $t('orders.in_stock_at', { loc: dev.warehouseLocation || 'Kho IT' }) }}</span>
                       </div>
                     </td>
                     <td>
                       <span v-if="dev.isTransferredToAsset" class="badge-synced">
-                        ✅ Đã vào Kho Tài sản
+                        ✅ {{ $t('orders.synced') }}
                       </span>
                       <span v-else-if="currentOrder.departmentID" class="badge-unsynced" style="background: #eff6ff; color: #1d4ed8;">
-                        🏬 Của bộ phận (không đồng bộ)
+                        🏬 {{ $t('orders.dept_owned') }}
                       </span>
                       <span v-else class="badge-unsynced">
-                        ⏳ Chờ đồng bộ
+                        ⏳ {{ $t('orders.awaiting_sync') }}
                       </span>
                     </td>
                     <td style="text-align: center;">
@@ -924,7 +922,7 @@
                         type="button" 
                         class="btn-icon-del" 
                         @click="deleteDeviceItem(dev.deviceItemID)"
-                        title="Xóa máy này khỏi đơn"
+                        :title="$t('orders.remove_device_title')"
                       >
                         ✕
                       </button>
@@ -937,26 +935,26 @@
         <!-- BIÊN BẢN BÀN GIAO CỦA ĐƠN BỘ PHẬN: IN + IMPORT LƯU TRỮ -->
         <div v-if="currentOrder.departmentID" class="order-docs-section">
           <div class="list-title-row">
-            <h4>📄 Biên Bản Bàn Giao Đã Lưu ({{ orderDocs.length }})</h4>
+            <h4>📄 {{ $t('orders.docs_title', { count: orderDocs.length }) }}</h4>
             <div style="display: flex; gap: 8px;">
               <button type="button" class="btn btn-secondary" @click="isPrintOpen = true" :disabled="!currentOrder.items?.length">
-                🖨️ In Biên Bản Bàn Giao
+                🖨️ {{ $t('orders.btn_print_handover') }}
               </button>
               <button type="button" class="btn btn-primary" @click="orderDocInput?.click()" :disabled="uploadingDoc">
                 <span v-if="uploadingDoc" class="spinner-mini"></span>
-                <span>⬆️ Import Biên Bản</span>
+                <span>⬆️ {{ $t('orders.btn_import_doc') }}</span>
               </button>
               <input ref="orderDocInput" type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" style="display: none;" @change="onOrderDocSelected" />
             </div>
           </div>
-          <div v-if="orderDocs.length === 0" class="empty-devices">Chưa có biên bản nào được import cho đơn hàng này.</div>
+          <div v-if="orderDocs.length === 0" class="empty-devices">{{ $t('orders.no_docs') }}</div>
           <table v-else class="sub-table">
             <thead>
               <tr>
-                <th>Tên tài liệu</th>
-                <th style="width: 110px;">Dung lượng</th>
-                <th style="width: 150px;">Ngày import</th>
-                <th style="width: 130px; text-align: center;">Thao tác</th>
+                <th>{{ $t('orders.doc_name') }}</th>
+                <th style="width: 110px;">{{ $t('orders.doc_size') }}</th>
+                <th style="width: 150px;">{{ $t('orders.doc_import_date') }}</th>
+                <th style="width: 130px; text-align: center;">{{ $t('orders.action') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -965,8 +963,8 @@
                 <td>{{ doc.fileSizeFormatted }}</td>
                 <td>{{ formatDate(doc.createdAt) }}</td>
                 <td style="text-align: center;">
-                  <a :href="documentsApi.getDownloadUrl(doc.documentID)" target="_blank" class="btn btn-secondary" style="padding: 2px 8px;">Xem</a>
-                  <button type="button" class="btn-icon-del" @click="deleteOrderDoc(doc)" title="Xóa biên bản">✕</button>
+                  <a :href="documentsApi.getDownloadUrl(doc.documentID)" target="_blank" class="btn btn-secondary" style="padding: 2px 8px;">{{ $t('orders.view') }}</a>
+                  <button type="button" class="btn-icon-del" @click="deleteOrderDoc(doc)" :title="$t('orders.delete_doc_title')">✕</button>
                 </td>
               </tr>
             </tbody>
@@ -977,7 +975,7 @@
         <!-- FOOTER: NÚT ĐỒNG BỘ SANG QUẢN LÝ TÀI SẢN -->
         <div class="modal-footer modal-footer-split">
           <div>
-            <button type="button" class="btn btn-secondary" @click="isDetailModalOpen = false">Đóng</button>
+            <button type="button" class="btn btn-secondary" @click="isDetailModalOpen = false">{{ $t('orders.close') }}</button>
           </div>
 
           <div class="footer-sync-actions">
@@ -990,7 +988,7 @@
             >
               <span v-if="syncingAssets" class="spinner-mini"></span>
               <span v-else>🚀</span>
-              <span>Đồng Bộ Vào Quản Lý Tài Sản ({{ untransferredCount }} máy mới)</span>
+              <span>{{ $t('orders.sync_btn', { count: untransferredCount }) }}</span>
             </button>
           </div>
         </div>
@@ -1013,8 +1011,8 @@
           <div class="modal-title-box">
             <div class="modal-icon blue">✏️</div>
             <div>
-              <h2 class="modal-title">Chỉnh Sửa Đơn Hàng</h2>
-              <p class="modal-subtitle">Cập nhật thông tin đơn hàng {{ editForm.orderCode }}</p>
+              <h2 class="modal-title">{{ $t('orders.edit_title') }}</h2>
+              <p class="modal-subtitle">{{ $t('orders.edit_subtitle_code', { code: editForm.orderCode }) }}</p>
             </div>
           </div>
           <button type="button" class="btn-close" @click="isEditModalOpen = false">✕</button>
@@ -1023,46 +1021,46 @@
         <form @submit.prevent="submitUpdateOrder" class="modal-body">
           <div class="form-grid-2">
             <div class="form-group">
-              <label class="form-label">Mã PR (PR Code) <span class="badge-optional">Tùy chọn</span></label>
+              <label class="form-label">{{ $t('orders.pr_code_label2') }} <span class="badge-optional">{{ $t('orders.optional') }}</span></label>
               <input 
                 type="text" 
                 class="form-control" 
                 v-model="editForm.prCode" 
-                placeholder="VD: PR-2026-001 (để trống nếu không có)"
+                :placeholder="$t('orders.pr_ph')"
               />
             </div>
             <div class="form-group">
-              <label class="form-label">Bộ phận đặt hàng <span class="badge-optional">Tùy chọn</span></label>
+              <label class="form-label">{{ $t('orders.ordering_dept') }} <span class="badge-optional">{{ $t('orders.optional') }}</span></label>
               <select class="form-control" v-model="editForm.departmentID">
-                <option :value="null">— Kho chung (cấp phát cho mọi bộ phận) —</option>
+                <option :value="null">{{ $t('orders.shared_stock') }}</option>
                 <option v-for="d in departmentsList" :key="d.departmentID" :value="d.departmentID">{{ d.departmentName }}</option>
               </select>
-              <span class="field-hint-dept">Nếu đơn do bộ phận khác đặt, thiết bị chỉ được cấp phát cho nhân sự bộ phận đó.</span>
+              <span class="field-hint-dept">{{ $t('orders.dept_hint') }}</span>
             </div>
             <div class="form-group">
-              <label class="form-label">Trạng thái đơn hàng</label>
+              <label class="form-label">{{ $t('orders.order_status') }}</label>
               <select class="form-control" v-model="editForm.status">
-                <option value="Pending">Chờ nhận (Pending)</option>
-                <option value="Receiving">Đang nhận (Receiving)</option>
-                <option value="Partial">Nhận một phần (Partial)</option>
-                <option value="Completed">Đã hoàn tất (Completed)</option>
-                <option value="Cancelled">Đã hủy (Cancelled)</option>
+                <option value="Pending">{{ $t('orders.opt2_pending') }}</option>
+                <option value="Receiving">{{ $t('orders.opt2_receiving') }}</option>
+                <option value="Partial">{{ $t('orders.opt2_partial') }}</option>
+                <option value="Completed">{{ $t('orders.opt_completed') }}</option>
+                <option value="Cancelled">{{ $t('orders.opt2_cancelled') }}</option>
               </select>
             </div>
           </div>
 
           <div class="form-grid-2" style="margin-top: 10px;">
             <div class="form-group">
-              <label class="form-label">Nhà cung cấp</label>
+              <label class="form-label">{{ $t('orders.supplier') }}</label>
               <select class="form-control" v-model="editForm.supplierID" @change="onEditSupplierChange">
-                <option :value="null">-- Chọn nhà cung cấp (nếu có) --</option>
+                <option :value="null">{{ $t('orders.supplier_ph') }}</option>
                 <option v-for="sup in suppliersList" :key="sup.supplierID" :value="sup.supplierID">
                   {{ sup.supplierName }}
                 </option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Ngày giao dự kiến</label>
+              <label class="form-label">{{ $t('orders.expected_delivery_short') }}</label>
               <DateTextInput v-model="editForm.expectedDeliveryDate" />
             </div>
           </div>
@@ -1071,35 +1069,35 @@
           <div class="project-box" style="margin-top: 12px;">
             <label class="checkbox-label">
               <input type="checkbox" v-model="editForm.isProjectBased" />
-              <span class="checkbox-text">Đơn hàng này thuộc Dự án cụ thể</span>
+              <span class="checkbox-text">{{ $t('orders.is_project') }}</span>
             </label>
             <div v-if="editForm.isProjectBased" class="project-input-wrap">
-              <label class="form-label">Tên dự án <span class="req">*</span></label>
+              <label class="form-label">{{ $t('orders.project_name') }} <span class="req">*</span></label>
               <input 
                 type="text" 
                 class="form-control" 
                 v-model="editForm.projectName" 
                 required 
-                placeholder="VD: Dự án Smart Factory Q4..." 
+                :placeholder="$t('orders.project_ph_short')" 
               />
             </div>
           </div>
 
           <div class="form-group" style="margin-top: 10px;">
-            <label class="form-label">Ghi chú đơn hàng</label>
+            <label class="form-label">{{ $t('orders.order_note') }}</label>
             <textarea 
               class="form-control" 
               rows="3" 
               v-model="editForm.note" 
-              placeholder="Ghi chú về tiến độ, lý do chỉnh sửa..."
+              :placeholder="$t('orders.note_edit_ph')"
             ></textarea>
           </div>
 
           <div class="modal-footer" style="padding: 16px 0 0 0; margin-top: 16px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
-            <button type="button" class="btn btn-secondary" @click="isEditModalOpen = false">Hủy</button>
+            <button type="button" class="btn btn-secondary" @click="isEditModalOpen = false">{{ $t('orders.cancel') }}</button>
             <button type="submit" class="btn btn-primary" :disabled="editSubmitting">
               <span v-if="editSubmitting" class="spinner-mini"></span>
-              <span>Lưu Thay Đổi</span>
+              <span>{{ $t('orders.save_changes') }}</span>
             </button>
           </div>
         </form>
@@ -1115,9 +1113,9 @@
           <div class="modal-title-box">
             <div class="modal-icon green">➕</div>
             <div>
-              <h2 class="modal-title">Thêm Loại Thiết Bị Vào Đơn Hàng</h2>
+              <h2 class="modal-title">{{ $t('orders.add_item_title') }}</h2>
               <p class="modal-subtitle">
-                Đơn hàng: <strong>{{ targetOrderForAddItem?.orderCode }}</strong>
+                {{ $t('orders.order_label') }} <strong>{{ targetOrderForAddItem?.orderCode }}</strong>
                 <span v-if="targetOrderForAddItem?.prCode"> (PR: {{ targetOrderForAddItem?.prCode }})</span>
               </p>
             </div>
@@ -1128,9 +1126,9 @@
         <form @submit.prevent="submitAddItem" class="modal-body">
           <div class="form-grid-2">
             <div class="form-group">
-              <label class="form-label">Phân loại thiết bị <span class="req">*</span></label>
+              <label class="form-label">{{ $t('orders.category_device') }} <span class="req">*</span></label>
               <select class="form-control" v-model="addItemForm.categoryID" required>
-                <option :value="null">-- Chọn phân loại --</option>
+                <option :value="null">{{ $t('orders.category_ph') }}</option>
                 <option v-for="cat in categoriesList" :key="cat.categoryID" :value="cat.categoryID">
                   {{ cat.categoryName }}
                 </option>
@@ -1138,79 +1136,79 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Số lượng dự kiến mua <span class="req">*</span></label>
+              <label class="form-label">{{ $t('orders.qty_expected_buy') }} <span class="req">*</span></label>
               <input 
                 type="number" 
                 class="form-control" 
                 v-model.number="addItemForm.expectedQuantity" 
                 min="1" 
                 required 
-                placeholder="VD: 5" 
+                :placeholder="$t('orders.qty_ph')" 
               />
             </div>
           </div>
 
           <div class="form-grid-2" style="margin-top: 10px;">
             <div class="form-group">
-              <label class="form-label">Tên Model thiết bị <span class="req">*</span></label>
+              <label class="form-label">{{ $t('orders.model_name') }} <span class="req">*</span></label>
               <input 
                 type="text" 
                 class="form-control" 
                 v-model="addItemForm.modelName" 
                 required 
-                placeholder="VD: Lenovo ThinkPad T14 Gen 4, Dell P2422H..." 
+                :placeholder="$t('orders.model_ph2')" 
               />
             </div>
 
             <div class="form-group">
-              <label class="form-label">Hãng sản xuất</label>
+              <label class="form-label">{{ $t('orders.manufacturer') }}</label>
               <input 
                 type="text" 
                 class="form-control" 
                 v-model="addItemForm.brand" 
-                placeholder="VD: Lenovo, Dell, HP, Apple..." 
+                :placeholder="$t('orders.manufacturer_ph')" 
               />
             </div>
           </div>
 
           <div class="form-group" style="margin-top: 10px;">
-            <label class="form-label">Cấu hình / Thông số kỹ thuật</label>
+            <label class="form-label">{{ $t('orders.spec_tech') }}</label>
             <input 
               type="text" 
               class="form-control" 
               v-model="addItemForm.specifications" 
-              placeholder="VD: Core i7-1355U, 16GB RAM, 512GB SSD, 14 inch FHD..." 
+              :placeholder="$t('orders.spec_ph2')" 
             />
           </div>
 
           <div class="form-grid-2" style="margin-top: 10px;">
             <div class="form-group">
-              <label class="form-label">Đơn giá dự kiến (VNĐ / máy)</label>
+              <label class="form-label">{{ $t('orders.unit_price') }}</label>
               <input 
                 type="number" 
                 class="form-control" 
                 v-model.number="addItemForm.unitPrice" 
-                placeholder="VD: 25000000" 
+                :placeholder="$t('orders.price_ph')" 
               />
             </div>
 
             <div class="form-group">
-              <label class="form-label">Ghi chú dòng thiết bị</label>
+              <label class="form-label">{{ $t('orders.line_note') }}</label>
               <input 
                 type="text" 
                 class="form-control" 
                 v-model="addItemForm.note" 
-                placeholder="Ghi chú thêm về chủng loại..." 
+                :placeholder="$t('orders.line_note_ph')" 
               />
             </div>
           </div>
 
           <div class="modal-footer" style="padding: 16px 0 0 0; margin-top: 16px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
-            <button type="button" class="btn btn-secondary" @click="isAddItemModalOpen = false">Hủy</button>
+            <button type="button" class="btn btn-secondary" @click="isAddItemModalOpen = false">{{ $t('orders.cancel') }}</button>
             <button type="submit" class="btn btn-success" :disabled="addItemSubmitting">
               <span v-if="addItemSubmitting" class="spinner-mini"></span>
               <span v-else>➕</span>
-              <span>Thêm Vào Đơn Hàng</span>
+              <span>{{ $t('orders.btn_add_to_order') }}</span>
             </button>
           </div>
         </form>
@@ -1226,6 +1224,7 @@ import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from
 import { useRouter } from 'vue-router'
 import { ordersApi, categoriesApi, suppliersApi, departmentsApi, documentsApi } from '@/api/client'
 import { isQuantityAsset } from '@/utils/assetKind'
+import { t, currentLocale } from '@/i18n'
 
 const router = useRouter()
 
@@ -1328,19 +1327,19 @@ const onOrderDocSelected = async (e) => {
     await documentsApi.upload(fd)
     await loadOrderDocs()
   } catch (err) {
-    alert('Lỗi import biên bản: ' + err.message)
+    alert(t('orders.err_import_doc') + err.message)
   } finally {
     uploadingDoc.value = false
   }
 }
 
 const deleteOrderDoc = async (doc) => {
-  if (!confirm(`Xóa biên bản "${doc.documentName}"?`)) return
+  if (!confirm(t('orders.confirm_delete_doc', { name: doc.documentName }))) return
   try {
     await documentsApi.delete(doc.documentID)
     await loadOrderDocs()
   } catch (err) {
-    alert('Lỗi xóa biên bản: ' + err.message)
+    alert(t('orders.err_delete_doc') + err.message)
   }
 }
 const inputMode = ref('single') // 'single' | 'bulk'
@@ -1497,7 +1496,7 @@ const onSupplierChange = () => {
 // Submit Bước 1: Tạo đơn
 const submitCreateOrder = async () => {
   if (createForm.isProjectBased && !createForm.projectName.trim()) {
-    alert('Vui lòng nhập tên dự án!')
+    alert(t('orders.msg_project_required'))
     return
   }
 
@@ -1532,7 +1531,7 @@ const submitCreateOrder = async () => {
       await openDetailModal(createdOrder.orderID)
     }
   } catch (err) {
-    alert('Lỗi tạo đơn hàng: ' + err.message)
+    alert(t('orders.err_create_order') + err.message)
   } finally {
     submitting.value = false
   }
@@ -1561,7 +1560,7 @@ const openDetailModal = async (orderId) => {
       serialInputRef.value?.focus()
     })
   } catch (err) {
-    alert('Lỗi mở chi tiết đơn hàng: ' + err.message)
+    alert(t('orders.err_open_detail') + err.message)
   }
 }
 
@@ -1593,14 +1592,12 @@ const submitSingleDevice = async () => {
   if (isSingleQtyItem.value) {
     const qty = Number(singleDeviceForm.quantity)
     if (!Number.isInteger(qty) || qty < 1) {
-      alert('Vui lòng nhập số lượng hợp lệ!')
+      alert(t('orders.msg_qty_invalid'))
       return
     }
     if (qty > singleRemaining.value) {
       playBeep(false)
-      alert(`⚠️ VƯỢT QUÁ SỐ LƯỢNG CÒN THIẾU!
-
-Loại "${singleSelectedItem.value.modelName}" chỉ còn cần nhập thêm ${singleRemaining.value}, nhưng bạn nhập ${qty}.`)
+      alert(t('orders.alert_over_remaining', { model: singleSelectedItem.value.modelName, remaining: singleRemaining.value, qty: qty }))
       return
     }
     submittingDevice.value = true
@@ -1621,7 +1618,7 @@ Loại "${singleSelectedItem.value.modelName}" chỉ còn cần nhập thêm ${s
       singleDeviceForm.quantity = Math.max(1, singleRemaining.value)
     } catch (err) {
       playBeep(false)
-      alert('❌ Không thể thêm thiết bị:\n' + err.message)
+      alert(t('orders.err_add_device') + err.message)
     } finally {
       submittingDevice.value = false
     }
@@ -1630,7 +1627,7 @@ Loại "${singleSelectedItem.value.modelName}" chỉ còn cần nhập thêm ${s
 
   const rawSerial = singleDeviceForm.serialNumber?.trim()
   if (!rawSerial) {
-    alert('Vui lòng nhập hoặc quét số Serial!')
+    alert(t('orders.msg_serial_required'))
     nextTick(() => serialInputRef.value?.focus())
     return
   }
@@ -1639,7 +1636,7 @@ Loại "${singleSelectedItem.value.modelName}" chỉ còn cần nhập thêm ${s
   const selectedItem = currentOrder.value?.items?.find(it => it.orderItemID === singleDeviceForm.orderItemID)
   if (selectedItem && selectedItem.receivedQuantity >= selectedItem.expectedQuantity) {
     playBeep(false) // Âm cảnh báo lỗi
-    alert(`⚠️ ĐÃ NHẬN ĐỦ SỐ LƯỢNG!\n\nLoại thiết bị "${selectedItem.modelName}" đã nhận đủ ${selectedItem.receivedQuantity}/${selectedItem.expectedQuantity} máy theo đơn đặt hàng.\n\n❌ Hệ thống đã CHẶN không cho quét thêm vào loại này! Vui lòng chọn loại thiết bị khác còn thiếu trong đơn.`)
+    alert(t('orders.alert_full', { model: selectedItem.modelName, received: selectedItem.receivedQuantity, expected: selectedItem.expectedQuantity }))
     singleDeviceForm.serialNumber = ''
     nextTick(() => serialInputRef.value?.focus())
     return
@@ -1652,7 +1649,7 @@ Loại "${singleSelectedItem.value.modelName}" chỉ còn cần nhập thêm ${s
 
   if (duplicateDevice) {
     playBeep(false) // Âm cảnh báo lỗi
-    alert(`⚠️ CẢNH BÁO TRÙNG MÃ SERIAL!\n\nThiết bị có số Serial: "${rawSerial}" đã được quét trong đơn hàng này rồi!\n(Mã tài sản: ${duplicateDevice.assetCode || 'Chưa gán'})\n\n❌ Hệ thống đã CHẶN không cho thêm lặp lại. Vui lòng kiểm tra lại thiết bị!`)
+    alert(t('orders.alert_dup_serial', { serial: rawSerial, asset: duplicateDevice.assetCode || t('orders.unassigned') }))
     singleDeviceForm.serialNumber = ''
     nextTick(() => {
       serialInputRef.value?.focus()
@@ -1695,7 +1692,7 @@ Loại "${singleSelectedItem.value.modelName}" chỉ còn cần nhập thêm ${s
     })
   } catch (err) {
     playBeep(false) // Âm trầm cảnh báo lỗi (VD: trùng serial trong kho)
-    alert('❌ Không thể thêm thiết bị:\n' + err.message)
+    alert(t('orders.err_add_device') + err.message)
     singleDeviceForm.serialNumber = ''
     nextTick(() => {
       serialInputRef.value?.focus()
@@ -1715,7 +1712,7 @@ const submitBulkDevices = async () => {
     .filter(Boolean)
 
   if (lines.length === 0) {
-    alert('Vui lòng dán danh sách Serial Number!')
+    alert(t('orders.msg_paste_serials'))
     return
   }
 
@@ -1725,12 +1722,12 @@ const submitBulkDevices = async () => {
     const remaining = selectedItem.expectedQuantity - selectedItem.receivedQuantity
     if (remaining <= 0) {
       playBeep(false)
-      alert(`⚠️ ĐÃ NHẬN ĐỦ SỐ LƯỢNG!\n\nLoại thiết bị "${selectedItem.modelName}" đã nhận đủ (${selectedItem.receivedQuantity}/${selectedItem.expectedQuantity} máy).\n\n❌ Không thể thêm tiếp vào loại này!`)
+      alert(t('orders.alert_bulk_full', { model: selectedItem.modelName, received: selectedItem.receivedQuantity, expected: selectedItem.expectedQuantity }))
       return
     }
     if (lines.length > remaining) {
       playBeep(false)
-      alert(`⚠️ VƯỢT QUÁ SỐ LƯỢNG CÒN THIẾU!\n\nLoại thiết bị "${selectedItem.modelName}" chỉ còn cần nhập thêm ${remaining} máy nữa (đã nhận ${selectedItem.receivedQuantity}/${selectedItem.expectedQuantity}), nhưng danh sách bạn dán có tới ${lines.length} máy.\n\n❌ Vui lòng điều chỉnh lại danh sách Serial!`)
+      alert(t('orders.alert_bulk_over', { model: selectedItem.modelName, remaining: remaining, received: selectedItem.receivedQuantity, expected: selectedItem.expectedQuantity, count: lines.length }))
       return
     }
   }
@@ -1749,7 +1746,7 @@ const submitBulkDevices = async () => {
 
   if (internalDups.length > 0) {
     playBeep(false)
-    alert(`⚠️ CẢNH BÁO: Danh sách bạn dán có các mã Serial bị trùng nhau:\n- ${internalDups.join('\n- ')}\n\nVui lòng lọc bỏ các dòng trùng lặp trước khi thêm!`)
+    alert(t('orders.alert_internal_dups', { list: internalDups.join('\n- ') }))
     return
   }
 
@@ -1763,7 +1760,7 @@ const submitBulkDevices = async () => {
   const dupsWithCurrentOrder = lines.filter(sn => currentSerials.has(sn.toLowerCase()))
   if (dupsWithCurrentOrder.length > 0) {
     playBeep(false)
-    alert(`⚠️ CẢNH BÁO: Các mã Serial sau ĐÃ CÓ trong đơn hàng này:\n- ${dupsWithCurrentOrder.join('\n- ')}\n\nKhông thể thêm trùng lặp!`)
+    alert(t('orders.alert_dups_in_order', { list: dupsWithCurrentOrder.join('\n- ') }))
     return
   }
 
@@ -1782,10 +1779,10 @@ const submitBulkDevices = async () => {
     const updated = await ordersApi.getById(currentOrder.value.orderID)
     currentOrder.value = updated
     await fetchOrders()
-    alert(`✅ Đã thêm thành công ${lines.length} thiết bị vào đơn!`)
+    alert(t('orders.alert_bulk_ok', { count: lines.length }))
   } catch (err) {
     playBeep(false)
-    alert('❌ Lỗi thêm hàng loạt:\n' + err.message)
+    alert(t('orders.err_bulk_add') + err.message)
   } finally {
     submittingDevice.value = false
   }
@@ -1793,7 +1790,7 @@ const submitBulkDevices = async () => {
 
 // Xóa thiết bị khỏi đơn
 const deleteDeviceItem = async (deviceId) => {
-  if (!confirm('Bạn có chắc muốn xóa thiết bị này khỏi đơn?')) return
+  if (!confirm(t('orders.confirm_delete_device'))) return
 
   try {
     await ordersApi.removeDevice(currentOrder.value.orderID, deviceId)
@@ -1801,13 +1798,13 @@ const deleteDeviceItem = async (deviceId) => {
     currentOrder.value = updated
     await fetchOrders()
   } catch (err) {
-    alert('Lỗi xóa thiết bị: ' + err.message)
+    alert(t('orders.err_delete_device') + err.message)
   }
 }
 
 // ĐỒNG BỘ SANG BẢNG QUẢN LÝ TÀI SẢN (Bước 3)
 const syncOrderToAssets = async () => {
-  if (!confirm(`Xác nhận đồng bộ ${untransferredCount.value} thiết bị sang tab Quản lý Tài sản?`)) return
+  if (!confirm(t('orders.confirm_sync', { count: untransferredCount.value }))) return
 
   syncingAssets.value = true
   try {
@@ -1819,14 +1816,14 @@ const syncOrderToAssets = async () => {
     await fetchOrders()
 
     const confirmGo = confirm(
-      `${res.message || 'Đồng bộ thành công!'}\n\nBạn có muốn chuyển sang tab Quản lý Tài sản ngay bây giờ để xem danh sách tài sản vừa nhập không?`
+      `${res.message || t('orders.sync_success')}\n\n${t('orders.sync_goto_confirm')}`
     )
     if (confirmGo) {
       isDetailModalOpen.value = false
       router.push('/assets')
     }
   } catch (err) {
-    alert('Lỗi đồng bộ vào tài sản: ' + err.message)
+    alert(t('orders.err_sync') + err.message)
   } finally {
     syncingAssets.value = false
   }
@@ -1869,11 +1866,11 @@ const handleActionAddItem = (order) => {
 const submitAddItem = async () => {
   if (!targetOrderForAddItem.value) return
   if (!addItemForm.modelName?.trim()) {
-    alert('Vui lòng nhập tên Model thiết bị!')
+    alert(t('orders.msg_model_required'))
     return
   }
   if (addItemForm.expectedQuantity < 1) {
-    alert('Số lượng dự kiến phải lớn hơn 0!')
+    alert(t('orders.msg_qty_positive'))
     return
   }
 
@@ -1901,9 +1898,9 @@ const submitAddItem = async () => {
       currentOrder.value = updated
     }
 
-    alert(`✅ Đã thêm loại thiết bị "${payload.modelName}" (${payload.expectedQuantity} máy) vào đơn hàng thành công!`)
+    alert(t('orders.alert_item_added', { model: payload.modelName, count: payload.expectedQuantity }))
   } catch (err) {
-    alert('Lỗi thêm loại thiết bị: ' + err.message)
+    alert(t('orders.err_add_item') + err.message)
   } finally {
     addItemSubmitting.value = false
   }
@@ -1938,7 +1935,7 @@ const onEditSupplierChange = () => {
 
 const submitUpdateOrder = async () => {
   if (editForm.isProjectBased && !editForm.projectName.trim()) {
-    alert('Vui lòng nhập tên dự án!')
+    alert(t('orders.msg_project_required'))
     return
   }
 
@@ -1961,9 +1958,9 @@ const submitUpdateOrder = async () => {
     await ordersApi.update(editForm.orderID, payload)
     isEditModalOpen.value = false
     await fetchOrders()
-    alert('✅ Cập nhật thông tin đơn hàng thành công!')
+    alert(t('orders.msg_update_ok'))
   } catch (err) {
-    alert('Lỗi cập nhật đơn hàng: ' + err.message)
+    alert(t('orders.err_update_order') + err.message)
   } finally {
     editSubmitting.value = false
   }
@@ -1971,20 +1968,20 @@ const submitUpdateOrder = async () => {
 
 // Xóa đơn hàng
 const confirmDeleteOrder = async (order) => {
-  if (!confirm(`Bạn có chắc muốn xóa đơn hàng "${order.orderName}" (${order.orderCode})?`)) return
+  if (!confirm(t('orders.confirm_delete_order', { name: order.orderName, code: order.orderCode }))) return
 
   try {
     await ordersApi.delete(order.orderID)
     await fetchOrders()
   } catch (err) {
-    alert('Lỗi xóa đơn hàng: ' + err.message)
+    alert(t('orders.err_delete_order') + err.message)
   }
 }
 
 // Helpers định dạng
 const formatDate = (d) => {
   if (!d) return '---'
-  return new Date(d).toLocaleDateString('vi-VN')
+  return new Date(d).toLocaleDateString(currentLocale.value === 'en' ? 'en-GB' : 'vi-VN')
 }
 
 const getProgressPercent = (order) => {
@@ -1995,11 +1992,11 @@ const getProgressPercent = (order) => {
 
 const getStatusText = (status) => {
   switch (status) {
-    case 'Pending': return 'Chờ nhận'
-    case 'Receiving': return 'Đang nhận'
-    case 'Partial': return 'Nhận một phần'
-    case 'Completed': return 'Đã hoàn tất'
-    case 'Cancelled': return 'Đã hủy'
+    case 'Pending': return t('orders.status_pending')
+    case 'Receiving': return t('orders.status_receiving')
+    case 'Partial': return t('orders.status_partial')
+    case 'Completed': return t('orders.status_completed')
+    case 'Cancelled': return t('orders.status_cancelled')
     default: return status || 'Pending'
   }
 }

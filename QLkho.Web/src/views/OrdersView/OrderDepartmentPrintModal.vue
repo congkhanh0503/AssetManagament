@@ -1,8 +1,8 @@
 <template>
   <Modal
     :is-open="isOpen"
-    :title="`Biên Bản Bàn Giao Thiết Bị: ${order?.orderCode || ''}`"
-    :subtitle="`Bàn giao cho bộ phận ${deptCode}`"
+    :title="$t('orders.print_title', { code: order?.orderCode || '' })"
+    :subtitle="$t('orders.print_subtitle', { dept: deptCode })"
     @close="$emit('close')"
     max-width="960px"
     :z-index="10050"
@@ -26,7 +26,7 @@
         <div class="h-doc-date-bar">
           <div class="h-date-item">
             <span class="h-date-lbl">Handover Date:</span>
-            <strong class="h-date-val">{{ new Date().toLocaleDateString('vi-VN') }}</strong>
+            <strong class="h-date-val">{{ new Date().toLocaleDateString(currentLocale === 'en' ? 'en-GB' : 'vi-VN') }}</strong>
           </div>
           <div class="h-date-item">
             <span class="h-date-lbl">Order:</span>
@@ -85,7 +85,7 @@
                 <td class="h-val font-bold font-mono">{{ deptCode }}</td>
                 <td class="h-lbl">Receiver</td>
                 <td class="h-val font-bold text-uppercase" colspan="3">
-                  <input type="text" class="h-inline-input font-bold" v-model="receiverName" list="dept-receiver-list" placeholder="Người nhận..." @change="onReceiverChange" />
+                  <input type="text" class="h-inline-input font-bold" v-model="receiverName" list="dept-receiver-list" :placeholder="$t('orders.print_receiver_ph')" @change="onReceiverChange" />
                   <datalist id="dept-receiver-list">
                     <option v-for="e in deptEmployees" :key="e.employeeID" :value="e.fullName"></option>
                   </datalist>
@@ -96,7 +96,7 @@
                 <td class="h-val font-bold">{{ managerNameOnly }}</td>
                 <td class="h-lbl">Receiver Email</td>
                 <td class="h-val font-bold text-primary" colspan="3">
-                  <input type="text" class="h-inline-input font-bold" v-model="receiverEmail" placeholder="Email người nhận..." />
+                  <input type="text" class="h-inline-input font-bold" v-model="receiverEmail" :placeholder="$t('orders.print_receiver_email_ph')" />
                 </td>
               </tr>
             </tbody>
@@ -144,9 +144,9 @@
     </div>
 
     <div class="modal-actions-right no-print" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px;">
-      <button type="button" class="btn btn-secondary" @click="$emit('close')">Đóng</button>
+      <button type="button" class="btn btn-secondary" @click="$emit('close')">{{ $t('orders.close') }}</button>
       <button type="button" class="btn btn-primary" @click="handlePrint">
-        🖨️ In Biên Bản (A4 / PDF)
+        🖨️ {{ $t('orders.print_btn') }}
       </button>
     </div>
   </Modal>
@@ -157,6 +157,7 @@ import { ref, computed, watch } from 'vue'
 import { employeesApi } from '@/api/client'
 import QRCode from 'qrcode'
 import Modal from '@/components/common/Modal.vue'
+import { currentLocale } from '@/i18n'
 import companyLogo from '@/components/assets/img/logo.png'
 
 const props = defineProps({

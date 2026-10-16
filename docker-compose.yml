@@ -58,8 +58,14 @@ services:
         VITE_API_BASE_URL: "/api"
     container_name: qlkho_frontend
     restart: unless-stopped
+    environment:
+      # IP server mà điện thoại truy cập, dùng để sinh chứng chỉ HTTPS (chỉ sinh một lần)
+      SERVER_IP: "${SERVER_IP:-127.0.0.1}"
     ports:
       - "${WEB_PORT:-6767}:67"
+      - "${HTTPS_PORT:-6768}:443"
+    volumes:
+      - certs_data:/etc/nginx/certs
     depends_on:
       - backend
     networks:
@@ -72,6 +78,8 @@ volumes:
   postgres_data:
     driver: local
   uploads_data:
+    driver: local
+  certs_data:
     driver: local
 
 networks:

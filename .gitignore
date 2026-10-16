@@ -28,3 +28,9 @@ postgres_data/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Environment files (khong commit)
+.env
+.env.example
+**/.env
+**/.env.*

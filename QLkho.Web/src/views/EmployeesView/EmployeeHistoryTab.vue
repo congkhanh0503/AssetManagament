@@ -294,18 +294,7 @@
             <!-- Mô tả chi tiết -->
             <p class="event-description-text">{{ item.description }}</p>
 
-            <!-- Thay đổi giá trị Trước -> Sau (Nếu có) -->
-            <div v-if="item.oldValue || item.newValue" class="event-diff-box">
-              <div v-if="item.oldValue" class="diff-item diff-old">
-                <span class="diff-lbl">Trước:</span>
-                <span class="diff-val">{{ item.oldValue }}</span>
-              </div>
-              <div v-if="item.oldValue && item.newValue" class="diff-arrow">➔</div>
-              <div v-if="item.newValue" class="diff-item diff-new">
-                <span class="diff-lbl">Sau:</span>
-                <span class="diff-val">{{ item.newValue }}</span>
-              </div>
-            </div>
+            <HistoryDiff :old-value="item.oldValue" :new-value="item.newValue" />
           </div>
         </div>
       </div>
@@ -348,6 +337,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import HistoryDiff from '@/components/common/HistoryDiff.vue'
 
 const props = defineProps({
   histories: { type: Array, required: true },

@@ -25,6 +25,12 @@ apiClient.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`
   }
 
+  // Gửi tên tài khoản đang đăng nhập để backend ghi đúng người thực hiện vào lịch sử
+  try {
+    const username = JSON.parse(localStorage.getItem('qlkho_auth_user') || 'null')?.username
+    if (username) config.headers['X-Username'] = encodeURIComponent(username)
+  } catch (e) { /* bỏ qua nếu dữ liệu phiên hỏng */ }
+
   // Tự động xóa Content-Type cố định nếu payload là FormData để trình duyệt/axios tự gắn boundary multipart
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type']
@@ -289,3 +295,15 @@ export const ordersApi = {
   syncToAssets: (id) => apiClient.post(`/orders/${id}/sync-assets`),
 }
 
+
+export const inventoryApi = {
+  getSessions: () => apiClient.get('/inventory/sessions'),
+  createSession: (data) => apiClient.post('/inventory/sessions', data),
+  getSummary: (id) => apiClient.get(`/inventory/sessions/${id}/summary`),
+  getItems: (id, params) => apiClient.get(`/inventory/sessions/${id}/items`, { params }),
+  scan: (id, code) => apiClient.post(`/inventory/sessions/${id}/scan`, { code }),
+  unscan: (id, itemId) => apiClient.post(`/inventory/sessions/${id}/items/${itemId}/unscan`),
+  close: (id) => apiClient.post(`/inventory/sessions/${id}/close`),
+  reopen: (id) => apiClient.post(`/inventory/sessions/${id}/reopen`),
+  remove: (id) => apiClient.delete(`/inventory/sessions/${id}`),
+}

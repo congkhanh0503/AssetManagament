@@ -1,6 +1,13 @@
 <template>
   <header class="header">
     <div class="header-left">
+      <button type="button" class="btn-hamburger" aria-label="Menu" @click="toggleSidebar">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
     </div>
 
     <div class="header-right">
@@ -105,6 +112,9 @@ defineEmits(['global-search'])
 const router = useRouter()
 
 const isUserMenuOpen = ref(false)
+
+// Màn hình hẹp: sidebar là menu trượt, bật/tắt bằng class trên body (CSS trong main.css)
+const toggleSidebar = () => document.body.classList.toggle('sidebar-open')
 const currentUser = ref(getCurrentUser())
 
 const userInitials = computed(() => {
@@ -191,6 +201,15 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.btn-hamburger {
+  display: none;
+  background: transparent;
+  border: none;
+  padding: 6px;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
 .header {
   height: 70px;
   background: rgba(255, 255, 255, 0.85);

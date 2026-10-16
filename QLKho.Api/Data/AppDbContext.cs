@@ -24,10 +24,23 @@ public class AppDbContext : DbContext
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<OrderDeviceItem> OrderDeviceItems => Set<OrderDeviceItem>();
+    public DbSet<InventorySession> InventorySessions => Set<InventorySession>();
+    public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Kiểm kê: xóa đợt thì xóa luôn các dòng tài sản; mỗi tài sản chỉ xuất hiện một lần trong đợt
+        modelBuilder.Entity<InventoryItem>()
+            .HasOne(i => i.Session)
+            .WithMany(s => s.Items)
+            .HasForeignKey(i => i.SessionID)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<InventoryItem>()
+            .HasIndex(i => new { i.SessionID, i.AssetID })
+            .IsUnique();
 
         // Configure Department -> Manager (Employee)
         modelBuilder.Entity<Department>()
